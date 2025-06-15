@@ -5,24 +5,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, FilePlus, Sparkles, Wand2, Settings } from "lucide-react";
 import { FileControls } from "./FileControls";
 import { AiSettingsDialog } from "./AiSettingsDialog";
+import { decryptApiKey } from "@/lib/utils";
 
 export function AppSidebar() {
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
 
   useEffect(() => {
-    const checkApiKey = () => {
-      const apiKey = localStorage.getItem('googleAiApiKey');
-      setHasApiKey(!!apiKey);
+    const checkApiKey = async () => {
+      // We now check for the decrypted key.
+      // decryptApiKey returns an empty string if no key is found or decryption fails.
+      const key = await decryptApiKey();
+      setHasApiKey(!!key);
     };
 
     checkApiKey();
 
-    window.addEventListener('storage', checkApiKey);
+    // The 'apiKeySet' event is fired from the settings dialog when a key is saved or removed.
+    // This is how other components know to update.
     window.addEventListener('apiKeySet', checkApiKey);
 
     return () => {
-      window.removeEventListener('storage', checkApiKey);
       window.removeEventListener('apiKeySet', checkApiKey);
     };
   }, []);
