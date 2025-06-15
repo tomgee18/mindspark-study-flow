@@ -1,13 +1,11 @@
 
-import { useCallback, useEffect, useMemo, memo } from 'react'; // Import memo
+import { useCallback, useMemo, memo } from 'react';
 import {
   ReactFlow,
   addEdge,
   MiniMap,
   Controls,
   Background,
-  useNodesState,
-  useEdgesState,
   Connection,
   Edge,
   BackgroundVariant,
@@ -16,17 +14,16 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { initialNodes as initialNodesData, initialEdges as initialEdgesData } from './initial-elements';
-import CustomNode, { CustomNodeData } from './CustomNode';
+import CustomNode from './CustomNode';
+import { useMindMap } from '@/contexts/MindMapContext';
 
-// Renamed for clarity: this function now only returns descendant node IDs.
 const getDescendantNodeIds = (
-  nodeId: string, // The ID of the node that was collapsed
-  allEdges: FlowEdge[] // All edges in the graph, to find paths
+  nodeId: string,
+  allEdges: FlowEdge[]
 ): Set<string> => {
   const descendantIds = new Set<string>();
-  const queue: string[] = [nodeId]; // Start BFS from the collapsed node
-  const visitedInThisCall = new Set<string>([nodeId]); // Track visited nodes for this specific call
+  const queue: string[] = [nodeId];
+  const visitedInThisCall = new Set<string>([nodeId]);
 
   let head = 0;
   while (head < queue.length) {
@@ -47,32 +44,6 @@ const getDescendantNodeIds = (
 
 const nodeTypes = { custom: memo(CustomNode) };
 
-import {
-  ReactFlow,
-  addEdge,
-  MiniMap,
-  Controls,
-  Background,
-  // useNodesState, // Removed
-  // useEdgesState, // Removed
-  Connection,
-  Edge,
-  BackgroundVariant,
-  Node,
-  Edge as FlowEdge,
-  // OnNodesChange and OnEdgesChange types are implicitly handled by useNodesState/useEdgesState if used locally,
-  // but will be explicitly used from context.
-} from '@xyflow/react';
-import { useMindMap } from '@/contexts/MindMapContext'; // Import the context hook
-
-// ... (keep getDescendantNodeIds and CustomNode imports)
-// initialNodesData and initialEdgesData are not used here as context provides initial state.
-import CustomNode from './CustomNode'; // CustomNodeData is imported by MindMapContext
-
-const nodeTypes = { custom: memo(CustomNode) };
-
-// No more MindMapProps needed as everything comes from context
-
 const MindMap = () => {
   const {
     nodes,
@@ -83,9 +54,6 @@ const MindMap = () => {
     setSelectedNodeId,
     toggleNodeCollapse,
   } = useMindMap();
-
-  // onNodeClick is removed as onSelectionChange will handle selection updates.
-  // If other onNodeClick specific logic was needed, it could be kept.
 
   const handleSelectionChange = useCallback(
     ({ nodes: selectedNodes }: { nodes: Node[] }) => {
@@ -111,13 +79,13 @@ const MindMap = () => {
     const allHiddenNodeIds = new Set<string>();
     processedNodes.forEach(node => {
       if (node.data.isCollapsed) {
-        const descendantNodeIds = getDescendantNodeIds(node.id, edges); // edges from context
+        const descendantNodeIds = getDescendantNodeIds(node.id, edges);
         descendantNodeIds.forEach(id => allHiddenNodeIds.add(id));
       }
     });
 
     const currentFilteredNodes = processedNodes.filter(node => !allHiddenNodeIds.has(node.id));
-    const currentFilteredEdges = edges.filter(edge => // edges from context
+    const currentFilteredEdges = edges.filter(edge =>
         !allHiddenNodeIds.has(edge.source) &&
         !allHiddenNodeIds.has(edge.target)
     );
@@ -135,7 +103,7 @@ const MindMap = () => {
         onConnect={onConnect}
         onSelectionChange={handleSelectionChange}
         nodesFocusable={true}
-        onlyRenderVisibleElements={true} // Added this prop
+        onlyRenderVisibleElements={true}
         nodeTypes={nodeTypes}
         fitView
         className="bg-background"
