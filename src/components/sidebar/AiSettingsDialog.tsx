@@ -85,7 +85,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
             </p>
           </div>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 py-4 flex-1 overflow-y-auto">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="api-key" className="text-right">
               API Key
