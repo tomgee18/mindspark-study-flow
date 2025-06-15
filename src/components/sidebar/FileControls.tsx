@@ -48,6 +48,11 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const onJsonImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.type !== 'application/json') {
+        toast.error("Invalid file type. Please upload a valid JSON file.");
+        if(event.target) event.target.value = '';
+        return;
+      }
       if (file.size > MAX_FILE_SIZE) {
         toast.error("File is too large (max 10MB).");
         if(event.target) event.target.value = '';
@@ -103,6 +108,12 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (file.type !== 'text/plain' && file.type !== 'text/markdown') {
+        toast.error("Invalid file type. Please upload a .txt or .md file.");
+        if (event.target) event.target.value = '';
+        return;
+    }
+
     if (file.size > MAX_FILE_SIZE) {
       toast.error("File is too large (max 10MB).");
       if (event.target) event.target.value = '';
@@ -146,6 +157,12 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const onPdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+        toast.error("Invalid file type. Please upload a valid PDF file.");
+        if (event.target) event.target.value = '';
+        return;
+    }
 
     if (file.size > MAX_FILE_SIZE) {
       toast.error("File is too large (max 10MB).");

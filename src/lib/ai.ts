@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { Edge, Node } from '@xyflow/react';
 import { CustomNodeData } from "@/components/mind-map/CustomNode";
-import { sanitizeText, decryptApiKey } from "@/lib/utils";
+import { sanitizeText, decryptApiKey, checkRateLimit } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
 const MAX_TEXT_LENGTH = 50000; // 50k characters limit for input
@@ -13,6 +13,11 @@ type MindMapFlow = {
 }
 
 export async function generateMindMapFromText(text: string): Promise<MindMapFlow> {
+    const rateLimitResult = checkRateLimit('ai_generate');
+    if (!rateLimitResult.allowed) {
+        throw new Error(`You are making too many requests. Please try again in ${rateLimitResult.retryAfter} seconds.`);
+    }
+
     if (text.length > MAX_TEXT_LENGTH) {
         throw new Error(`Input text is too long. Please provide text with less than ${MAX_TEXT_LENGTH} characters.`);
     }

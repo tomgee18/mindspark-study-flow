@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
@@ -115,4 +114,31 @@ export function removeApiKey() {
     localStorage.removeItem(ENCRYPTED_API_KEY_NAME);
     localStorage.removeItem(ENCRYPTION_KEY_NAME);
     localStorage.removeItem('googleAiApiKey');
+}
+
+const RATE_LIMIT_COUNT = 5; // 5 requests per minute
+const RATE_LIMIT_DURATION = 60 * 1000; // 1 minute in ms
+
+export function checkRateLimit(key: string): { allowed: boolean; retryAfter?: number } {
+    const recordsKey = `rate_limit_${key}`;
+    const records = localStorage.getItem(recordsKey);
+    const now = Date.now();
+
+    if (!records) {
+        localStorage.setItem(recordsKey, JSON.stringify([now]));
+        return { allowed: true };
+    }
+
+    const timestamps: number[] = JSON.parse(records);
+    const recentTimestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_DURATION);
+
+    if (recentTimestamps.length >= RATE_LIMIT_COUNT) {
+        const oldestRequest = recentTimestamps.length > 0 ? recentTimestamps[0] : now;
+        const retryAfter = Math.ceil((oldestRequest + RATE_LIMIT_DURATION - now) / 1000);
+        return { allowed: false, retryAfter: Math.max(0, retryAfter) };
+    }
+
+    recentTimestamps.push(now);
+    localStorage.setItem(recordsKey, JSON.stringify(recentTimestamps));
+    return { allowed: true };
 }
