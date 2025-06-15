@@ -60,62 +60,46 @@ import {
   BackgroundVariant,
   Node,
   Edge as FlowEdge,
-  OnNodesChange, // Added
-  OnEdgesChange, // Added
+  // OnNodesChange and OnEdgesChange types are implicitly handled by useNodesState/useEdgesState if used locally,
+  // but will be explicitly used from context.
 } from '@xyflow/react';
+import { useMindMap } from '@/contexts/MindMapContext'; // Import the context hook
 
 // ... (keep getDescendantNodeIds and CustomNode imports)
-import { initialNodes as initialNodesData, initialEdges as initialEdgesData } from './initial-elements'; // Not used directly if props provide initial
-import CustomNode, { CustomNodeData } from './CustomNode';
-
+// initialNodesData and initialEdgesData are not used here as context provides initial state.
+import CustomNode from './CustomNode'; // CustomNodeData is imported by MindMapContext
 
 const nodeTypes = { custom: memo(CustomNode) };
 
-interface MindMapProps {
-  setSelectedNodeId: (id: string | null) => void;
-  nodes: Node<CustomNodeData>[];
-  edges: FlowEdge[];
-  onNodesChange: OnNodesChange;
-  onEdgesChange: OnEdgesChange;
-  onConnect: (params: FlowEdge | Connection) => void;
-  setNodes: (nodes: Node<CustomNodeData>[] | ((prevNodes: Node<CustomNodeData>[]) => Node<CustomNodeData>[])) => void;
-  // setEdges: (edges: FlowEdge[] | ((prevEdges: FlowEdge[]) => FlowEdge[])) => void; // onConnect handles this via prop
-}
+// No more MindMapProps needed as everything comes from context
 
-// Note: getDescendantNodeIds is defined outside, so it's fine.
+const MindMap = () => {
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    setSelectedNodeId,
+    toggleNodeCollapse,
+  } = useMindMap();
 
-const MindMap = ({
-  setSelectedNodeId,
-  nodes,
-  edges,
-  onNodesChange,
-  onEdgesChange,
-  onConnect,
-  setNodes,
-  // setEdges prop is not directly used if onConnect is passed and handles it.
-}: MindMapProps) => {
-  // const [nodes, setNodes, onNodesChange] = useNodesState<CustomNodeData>(initialNodesData); // Removed
-  // const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdgesData); // Removed
+  // onNodeClick is removed as onSelectionChange will handle selection updates.
+  // If other onNodeClick specific logic was needed, it could be kept.
 
-  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-    setSelectedNodeId(node.id);
-  }, [setSelectedNodeId]);
-
-  const toggleNodeCollapse = useCallback((nodeId: string) => {
-    // Use the setNodes prop from IndexPage
-    setNodes((currentNodes) =>
-      currentNodes.map((n) => // renamed node to n to avoid conflict
-        n.id === nodeId
-          ? { ...n, data: { ...n.data, isCollapsed: !(n.data.isCollapsed ?? false) } }
-          : n
-      )
-    );
-  }, [setNodes]); // Dependency is now the prop setNodes
-
-  // onConnect is now passed as a prop directly to ReactFlow.
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[] }) => {
+      if (selectedNodes.length === 1) {
+        setSelectedNodeId(selectedNodes[0].id);
+      } else {
+        setSelectedNodeId(null);
+      }
+    },
+    [setSelectedNodeId]
+  );
 
   const { filteredNodes, filteredEdges } = useMemo(() => {
-    const processedNodes = nodes.map(node => ({ // nodes from props
+    const processedNodes = nodes.map(node => ({
       ...node,
       data: {
         ...node.data,
@@ -127,19 +111,19 @@ const MindMap = ({
     const allHiddenNodeIds = new Set<string>();
     processedNodes.forEach(node => {
       if (node.data.isCollapsed) {
-        const descendantNodeIds = getDescendantNodeIds(node.id, edges);
+        const descendantNodeIds = getDescendantNodeIds(node.id, edges); // edges from context
         descendantNodeIds.forEach(id => allHiddenNodeIds.add(id));
       }
     });
 
     const currentFilteredNodes = processedNodes.filter(node => !allHiddenNodeIds.has(node.id));
-    const currentFilteredEdges = edges.filter(edge =>
+    const currentFilteredEdges = edges.filter(edge => // edges from context
         !allHiddenNodeIds.has(edge.source) &&
         !allHiddenNodeIds.has(edge.target)
     );
 
     return { filteredNodes: currentFilteredNodes, filteredEdges: currentFilteredEdges };
-  }, [nodes, edges, toggleNodeCollapse /*, selectedNodeId if it were a prop used here */]);
+  }, [nodes, edges, toggleNodeCollapse]);
 
   return (
     <div style={{ height: '100%', width: '100%' }}>
@@ -149,12 +133,12 @@ const MindMap = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={handleNodeClick} // Added onNodeClick handler
+        onSelectionChange={handleSelectionChange}
+        nodesFocusable={true}
+        onlyRenderVisibleElements={true} // Added this prop
         nodeTypes={nodeTypes}
         fitView
         className="bg-background"
-        // By default, clicking a node selects it and deselects others.
-        // This internal selection state is what CustomNode will receive as `selected`.
       >
         <Controls />
         <MiniMap />

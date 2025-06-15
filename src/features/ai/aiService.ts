@@ -62,36 +62,46 @@ Here is the text:
 ${sanitizedText}
 ---
 `;
-    
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig,
-        safetySettings,
-    });
+    let result;
+    try {
+        result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig,
+            safetySettings,
+        });
+    } catch (apiError: any) {
+        console.error("Google AI API error (generateMindMapFromText):", apiError.message);
+        // Consider more specific error messages based on apiError.status or type if available
+        throw new Error(`AI service request failed. Please try again later.`);
+    }
 
     try {
         const responseText = result.response.text();
-        // Robust cleaning of JSON, handling potential markdown and leading/trailing non-JSON text
         let cleanedJsonString = responseText.replace(/```json/g, '').replace(/```/g, '');
         const jsonStartIndex = cleanedJsonString.indexOf('{');
         const jsonEndIndex = cleanedJsonString.lastIndexOf('}');
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
             cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1);
         } else {
-            throw new Error("Could not find valid JSON in AI response.");
+            console.error("Raw AI response (generateMindMapFromText):", responseText);
+            throw new Error("The AI returned an unreadable mind map format. Please try again.");
         }
 
         const flow = JSON.parse(cleanedJsonString);
         if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges)) {
-            // Further validation for node/edge structure can be added here if needed
             return flow;
         } else {
-            throw new Error('Invalid JSON structure for mind map from AI (nodes or edges array missing).');
+            console.error("Invalid JSON structure from AI (generateMindMapFromText):", cleanedJsonString);
+            throw new Error("The AI's mind map data is incomplete. Please try again.");
         }
     } catch (e: any) {
-        console.error("Failed to parse AI response:", e.message);
-        console.error("Raw AI response text:", result.response.text()); // Log the raw text
-        throw new Error(`Failed to parse mind map from AI response: ${e.message}`);
+        // This catch block now primarily handles errors from JSON.parse or our direct throws.
+        console.error("Failed to parse AI response (generateMindMapFromText):", e.message);
+        // If it's one of our new Errors, rethrow it. Otherwise, wrap it.
+        if (e.message.startsWith("The AI returned") || e.message.startsWith("The AI's mind map data")) {
+            throw e;
+        }
+        throw new Error("The AI returned an unreadable mind map format. Please try again.");
     }
 }
 
