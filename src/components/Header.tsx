@@ -1,5 +1,6 @@
 
 import { BrainCircuit } from 'lucide-react';
+import { ModeToggle } from './mode-toggle';
 
 const Header = () => {
   return (
@@ -8,7 +9,9 @@ const Header = () => {
         <BrainCircuit className="h-8 w-8 text-primary" />
         <h1 className="text-2xl font-bold tracking-tight">MindSpark</h1>
       </div>
-      {/* Placeholder for user button or other actions */}
+      <div className="flex items-center gap-4">
+        <ModeToggle />
+      </div>
     </header>
   );
 };

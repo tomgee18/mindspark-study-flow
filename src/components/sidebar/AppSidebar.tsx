@@ -2,10 +2,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, FilePlus, Sparkles, Wand2 } from "lucide-react";
+import { FileControls } from "./FileControls";
 
 export function AppSidebar() {
   return (
     <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6">
+      <FileControls />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
