@@ -1,7 +1,8 @@
+
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { Edge, Node } from '@xyflow/react';
 import { CustomNodeData } from "@/components/mind-map/CustomNode";
-import { sanitizeText } from "@/lib/utils";
+import { sanitizeText, decryptApiKey } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
 const MAX_TEXT_LENGTH = 50000; // 50k characters limit for input
@@ -21,7 +22,7 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
         throw new Error("Input text is empty after sanitization.");
     }
 
-    const apiKey = localStorage.getItem('googleAiApiKey');
+    const apiKey = await decryptApiKey();
     if (!apiKey) {
         throw new Error("Google AI API key not found. Please set it in the AI Settings.");
     }

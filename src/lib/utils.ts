@@ -12,3 +12,107 @@ export function sanitizeText(text: string): string {
   return text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
 }
 
+const ENCRYPTION_KEY_NAME = 'mindspark-crypto-key';
+const ENCRYPTED_API_KEY_NAME = 'googleAiApiKey_encrypted';
+
+async function exportKey(key: CryptoKey): Promise<string> {
+    const exported = await window.crypto.subtle.exportKey('jwk', key);
+    return JSON.stringify(exported);
+}
+
+async function importKey(jwkString: string): Promise<CryptoKey> {
+    const jwk = JSON.parse(jwkString);
+    return window.crypto.subtle.importKey(
+        'jwk',
+        jwk,
+        { name: 'AES-GCM' },
+        true,
+        ['encrypt', 'decrypt']
+    );
+}
+
+async function getEncryptionKey(): Promise<CryptoKey> {
+    const storedKey = localStorage.getItem(ENCRYPTION_KEY_NAME);
+    if (storedKey) {
+        return importKey(storedKey);
+    }
+    const newKey = await window.crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+    );
+    const exportedKey = await exportKey(newKey);
+    localStorage.setItem(ENCRYPTION_KEY_NAME, exportedKey);
+    return newKey;
+}
+
+export async function encryptApiKey(apiKey: string): Promise<void> {
+    if (!apiKey) {
+        localStorage.removeItem(ENCRYPTED_API_KEY_NAME);
+        localStorage.removeItem('googleAiApiKey'); 
+        return;
+    }
+    try {
+        const key = await getEncryptionKey();
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const encoder = new TextEncoder();
+        const encodedApiKey = encoder.encode(apiKey);
+
+        const encryptedData = await window.crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            encodedApiKey
+        );
+
+        const ivAndEncryptedData = new Uint8Array(iv.length + encryptedData.byteLength);
+        ivAndEncryptedData.set(iv);
+        ivAndEncryptedData.set(new Uint8Array(encryptedData), iv.length);
+        
+        const base64String = btoa(String.fromCharCode(...ivAndEncryptedData));
+        localStorage.setItem(ENCRYPTED_API_KEY_NAME, base64String);
+        localStorage.removeItem('googleAiApiKey');
+    } catch(e) {
+        console.error("Encryption failed:", e);
+        throw new Error("Could not securely store API key.");
+    }
+}
+
+export async function decryptApiKey(): Promise<string> {
+    const base64String = localStorage.getItem(ENCRYPTED_API_KEY_NAME);
+    if (!base64String) {
+        const oldKey = localStorage.getItem('googleAiApiKey');
+        if (oldKey) {
+            await encryptApiKey(oldKey);
+            return oldKey;
+        }
+        return '';
+    }
+
+    try {
+        const key = await getEncryptionKey();
+        const ivAndEncryptedData = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
+        
+        const iv = ivAndEncryptedData.slice(0, 12);
+        const encryptedData = ivAndEncryptedData.slice(12);
+
+        const decryptedData = await window.crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv },
+            key,
+            encryptedData
+        );
+
+        const decoder = new TextDecoder();
+        return decoder.decode(decryptedData);
+    } catch (e) {
+        console.error("Decryption failed:", e);
+        localStorage.removeItem(ENCRYPTED_API_KEY_NAME);
+        localStorage.removeItem(ENCRYPTION_KEY_NAME);
+        return '';
+    }
+}
+
+export function removeApiKey() {
+    localStorage.removeItem(ENCRYPTED_API_KEY_NAME);
+    localStorage.removeItem(ENCRYPTION_KEY_NAME);
+    localStorage.removeItem('googleAiApiKey');
+}

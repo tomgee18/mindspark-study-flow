@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { encryptApiKey, decryptApiKey, removeApiKey } from '@/lib/utils';
+
 
 interface AiSettingsDialogProps {
   open: boolean;
@@ -22,29 +24,46 @@ interface AiSettingsDialogProps {
 
 export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) {
   const [apiKey, setApiKey] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
-      const storedApiKey = localStorage.getItem('googleAiApiKey');
-      if (storedApiKey) {
-        setApiKey(storedApiKey);
-      }
+      setIsLoading(true);
+      decryptApiKey()
+        .then(decryptedKey => {
+          setApiKey(decryptedKey);
+        })
+        .catch(err => {
+          console.error(err);
+          toast.error("Could not load API key.");
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   }, [open]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!apiKey) {
         toast.error('API Key cannot be empty.');
         return;
     }
-    localStorage.setItem('googleAiApiKey', apiKey);
-    toast.success('API Key saved successfully!');
-    window.dispatchEvent(new Event('apiKeySet')); // Notify other components
-    onOpenChange(false);
+    setIsLoading(true);
+    try {
+        await encryptApiKey(apiKey);
+        toast.success('API Key saved successfully!');
+        window.dispatchEvent(new Event('apiKeySet')); // Notify other components
+        onOpenChange(false);
+    } catch (err) {
+        console.error(err);
+        toast.error('Failed to save API key.');
+    } finally {
+        setIsLoading(false);
+    }
   };
   
   const handleRemove = () => {
-    localStorage.removeItem('googleAiApiKey');
+    removeApiKey();
     setApiKey('');
     toast.success('API Key removed successfully!');
     window.dispatchEvent(new Event('apiKeySet'));
@@ -62,7 +81,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
            <div className="!mt-4 flex items-start space-x-2 rounded-md border border-yellow-200 bg-yellow-50 p-3 text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <p className="text-sm">
-                Your API key is stored in your browser's local storage. This is not a secure method for storing secrets. Do not use this on a shared computer.
+                Your API key is stored securely in your browser's local storage. This is safer, but do not use this on a shared computer.
             </p>
           </div>
         </DialogHeader>
@@ -76,26 +95,26 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="col-span-3"
-              placeholder="Enter your Google AI API key"
+              placeholder={isLoading ? "Loading..." : "Enter your Google AI API key"}
               type="password"
+              disabled={isLoading}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="destructive" onClick={handleRemove} className="mr-auto">
+          <Button type="button" variant="destructive" onClick={handleRemove} className="mr-auto" disabled={isLoading}>
               Remove Key
           </Button>
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button type="button" variant="secondary" disabled={isLoading}>
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleSave}>
-            Save Key
+          <Button type="button" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? <Loader2 className="animate-spin" /> : 'Save Key'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
