@@ -1,27 +1,19 @@
-import { useCallback, useRef, useState } from 'react';
+
+import { useCallback, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Upload, FileText, Loader2, FileCode } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { toast } from 'sonner';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import { generateMindMapFromText } from '@/lib/ai';
+import { JsonImport } from './file-controls/JsonImport';
+import { PdfImport } from './file-controls/PdfImport';
+import { TextImport } from './file-controls/TextImport';
 
-// Set up the worker for pdfjs-dist from a CDN
-if (typeof window !== 'undefined' && 'Worker' in window) {
-  GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
-}
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+type LoadingType = null | 'pdf' | 'text';
 
 export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
-  const { getNodes, getEdges, setNodes, setEdges } = useReactFlow();
-  const jsonFileInputRef = useRef<HTMLInputElement>(null);
-  const pdfFileInputRef = useRef<HTMLInputElement>(null);
-  const txtFileInputRef = useRef<HTMLInputElement>(null);
-  const mdFileInputRef = useRef<HTMLInputElement>(null);
-  const [isPdfLoading, setIsPdfLoading] = useState(false);
-  const [isTextLoading, setIsTextLoading] = useState(false);
+  const { getNodes, getEdges } = useReactFlow();
+  const [loadingType, setLoadingType] = useState<LoadingType>(null);
 
   const onExport = useCallback(() => {
     const nodes = getNodes();
@@ -45,173 +37,6 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
     toast.success("Mind map exported successfully!");
   }, [getNodes, getEdges]);
 
-  const onJsonImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type !== 'application/json') {
-        toast.error("Invalid file type. Please upload a valid JSON file.");
-        if(event.target) event.target.value = '';
-        return;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error("File is too large (max 10MB).");
-        if(event.target) event.target.value = '';
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result;
-        if (typeof content === 'string') {
-          try {
-            const flow = JSON.parse(content);
-            if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges)) {
-              setNodes(flow.nodes);
-              setEdges(flow.edges);
-              toast.success("Mind map imported successfully!");
-            } else {
-              toast.error('Invalid JSON format for mind map.');
-            }
-          } catch (error) {
-            toast.error('Error parsing JSON file.');
-            console.error('Error parsing JSON file:', error);
-          }
-        }
-      };
-      reader.onerror = () => {
-        toast.error('Failed to read file.');
-      };
-      reader.readAsText(file);
-    }
-    if(event.target) {
-        event.target.value = '';
-    }
-  };
-
-  const handleJsonImportClick = () => {
-    jsonFileInputRef.current?.click();
-  };
-
-  const handlePdfImportClick = () => {
-    pdfFileInputRef.current?.click();
-  };
-  
-  const handleTxtImportClick = () => {
-    txtFileInputRef.current?.click();
-  };
-  
-  const handleMdImportClick = () => {
-    mdFileInputRef.current?.click();
-  };
-
-  const onTextFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'text/plain' && file.type !== 'text/markdown') {
-        toast.error("Invalid file type. Please upload a .txt or .md file.");
-        if (event.target) event.target.value = '';
-        return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("File is too large (max 10MB).");
-      if (event.target) event.target.value = '';
-      return;
-    }
-
-    setIsTextLoading(true);
-    const promise = async () => {
-      try {
-        const textContent = await file.text();
-        if (!textContent.trim()) {
-            throw new Error(`Could not extract text from ${file.name}. The file might be empty.`);
-        }
-        
-        const mindMap = await generateMindMapFromText(textContent);
-
-        setNodes(mindMap.nodes);
-        setEdges(mindMap.edges);
-      } catch(error) {
-        console.error(error);
-        if (error instanceof Error) {
-            throw new Error(error.message || `An unknown error occurred during ${file.name} processing.`);
-        }
-        throw new Error(`An unknown error occurred during ${file.name} processing.`);
-      }
-    };
-
-    toast.promise(promise(), {
-      loading: `Generating mind map from ${file.name}... This may take a moment.`,
-      success: 'Mind map generated successfully!',
-      error: (err) => err.message,
-      finally: () => {
-        setIsTextLoading(false);
-        if (event.target) {
-            event.target.value = '';
-        }
-      }
-    });
-  };
-
-  const onPdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-        toast.error("Invalid file type. Please upload a valid PDF file.");
-        if (event.target) event.target.value = '';
-        return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("File is too large (max 10MB).");
-      if (event.target) event.target.value = '';
-      return;
-    }
-
-    setIsPdfLoading(true);
-    const promise = async () => {
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await getDocument(arrayBuffer).promise;
-        let textContent = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const text = await page.getTextContent();
-          textContent += text.items.map((s: any) => s.str).join(' ');
-        }
-
-        if (!textContent.trim()) {
-            throw new Error("Could not extract text from PDF. The document might be empty or image-based.");
-        }
-        
-        const mindMap = await generateMindMapFromText(textContent);
-
-        setNodes(mindMap.nodes);
-        setEdges(mindMap.edges);
-      } catch(error) {
-        console.error(error);
-        if (error instanceof Error) {
-            throw new Error(error.message || 'An unknown error occurred during PDF processing.');
-        }
-        throw new Error('An unknown error occurred during PDF processing.');
-      }
-    };
-
-    toast.promise(promise(), {
-      loading: 'Generating mind map from PDF... This may take a moment.',
-      success: 'Mind map generated successfully!',
-      error: (err) => err.message,
-      finally: () => {
-        setIsPdfLoading(false);
-        if (event.target) {
-            event.target.value = '';
-        }
-      }
-    });
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -225,61 +50,16 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
           <Download className="mr-2 h-4 w-4" />
           Export JSON
         </Button>
-        <Button className="w-full" variant="outline" onClick={handleJsonImportClick}>
-          <Upload className="mr-2 h-4 w-4" />
-          Import JSON
-        </Button>
-        <Button className="w-full" variant="outline" onClick={handlePdfImportClick} disabled={!hasApiKey || isPdfLoading || isTextLoading}>
-            {isPdfLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <FileText className="mr-2 h-4 w-4" />
-            )}
-            Import from PDF
-        </Button>
-        <Button className="w-full" variant="outline" onClick={handleTxtImportClick} disabled={!hasApiKey || isPdfLoading || isTextLoading}>
-            {isTextLoading && !isPdfLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <FileText className="mr-2 h-4 w-4" />
-            )}
-            Import from Text
-        </Button>
-        <Button className="w-full" variant="outline" onClick={handleMdImportClick} disabled={!hasApiKey || isPdfLoading || isTextLoading}>
-            {isTextLoading && !isPdfLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <FileCode className="mr-2 h-4 w-4" />
-            )}
-            Import from Markdown
-        </Button>
-        <input
-          type="file"
-          ref={jsonFileInputRef}
-          onChange={onJsonImport}
-          style={{ display: 'none' }}
-          accept=".json"
+        <JsonImport />
+        <PdfImport 
+          hasApiKey={hasApiKey}
+          loadingType={loadingType}
+          setLoadingType={setLoadingType}
         />
-        <input
-          type="file"
-          ref={pdfFileInputRef}
-          onChange={onPdfImport}
-          style={{ display: 'none' }}
-          accept=".pdf"
-        />
-        <input
-          type="file"
-          ref={txtFileInputRef}
-          onChange={onTextFileImport}
-          style={{ display: 'none' }}
-          accept=".txt"
-        />
-        <input
-          type="file"
-          ref={mdFileInputRef}
-          onChange={onTextFileImport}
-          style={{ display: 'none' }}
-          accept=".md,.markdown"
+        <TextImport
+          hasApiKey={hasApiKey}
+          loadingType={loadingType}
+          setLoadingType={setLoadingType}
         />
       </CardContent>
     </Card>
