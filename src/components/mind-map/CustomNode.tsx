@@ -1,5 +1,5 @@
 
-import { memo } from 'react';
+import { memo, FC } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Book, Lightbulb, TestTube2, AlertTriangle, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ export type CustomNodeData = {
   type: keyof typeof typeConfig;
 };
 
-const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
+const CustomNode: FC<NodeProps<CustomNodeData>> = ({ data }) => {
   const config = typeConfig[data.type] || typeConfig.explanation;
   const Icon = config.icon;
 
