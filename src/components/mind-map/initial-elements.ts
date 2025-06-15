@@ -1,7 +1,8 @@
 
 import { Edge, Node } from '@xyflow/react';
+import { CustomNodeData } from './CustomNode';
 
-export const initialNodes: Node[] = [
+export const initialNodes: Node<CustomNodeData>[] = [
   {
     id: '1',
     type: 'custom',

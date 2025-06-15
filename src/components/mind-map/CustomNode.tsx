@@ -27,7 +27,12 @@ const typeConfig = {
     },
 };
 
-const CustomNode = ({ data }: NodeProps<{ label: string; type: keyof typeof typeConfig }>) => {
+export type CustomNodeData = {
+  label: string;
+  type: keyof typeof typeConfig;
+};
+
+const CustomNode = ({ data }: NodeProps<CustomNodeData>) => {
   const config = typeConfig[data.type] || typeConfig.explanation;
   const Icon = config.icon;
 
