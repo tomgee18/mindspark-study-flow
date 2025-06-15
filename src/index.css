@@ -73,3 +73,36 @@
 .react-flow__panel {
     z-index: 5;
 }
+
+/* React Flow Dark Mode Overrides */
+.dark .react-flow__panel {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .react-flow__controls-button {
+  background-color: hsl(var(--muted));
+  border-bottom-color: hsl(var(--border));
+}
+
+.dark .react-flow__controls-button:hover {
+  background-color: hsl(var(--accent) / 0.2);
+}
+
+.dark .react-flow__controls-button svg {
+  fill: hsl(var(--muted-foreground));
+}
+
+.dark .react-flow__minimap-node {
+  fill: hsl(var(--primary));
+  stroke: none;
+}
+
+.dark .react-flow__attribution {
+  background: transparent;
+}
+
+/* This targets the background pattern dots for both themes */
+.react-flow__background.dots path {
+  fill: hsl(var(--border));
+}
