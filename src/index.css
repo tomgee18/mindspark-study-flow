@@ -34,16 +34,6 @@
     --ring: 212 72% 58%;
 
     --radius: 0.5rem;
-
-    /* Sidebar */
-    --sidebar-background: var(--muted);
-    --sidebar-foreground: var(--muted-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--accent-foreground);
-    --sidebar-ring: var(--ring);
   }
 
   .dark {
