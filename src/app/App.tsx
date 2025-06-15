@@ -4,10 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import MainLayout from "./components/layout/MainLayout";
-import { ThemeProvider } from "./components/theme-provider";
+import Index from "@/pages/Index"; // Adjusted path
+import NotFound from "@/pages/NotFound"; // Adjusted path
+import MainLayout from "@/app/layout/MainLayout"; // Adjusted path
+import { ThemeProvider } from "@/app/theme-provider"; // Adjusted path
 
 const queryClient = new QueryClient();
 

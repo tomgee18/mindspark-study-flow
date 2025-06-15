@@ -133,8 +133,9 @@ const MindMap = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onSelectionChange={handleSelectionChange} // Use onSelectionChange
-        nodesFocusable={true} // Explicitly set, though often true by default
+        onSelectionChange={handleSelectionChange}
+        nodesFocusable={true}
+        onlyRenderVisibleElements={true} // Added this prop
         nodeTypes={nodeTypes}
         fitView
         className="bg-background"

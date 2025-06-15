@@ -17,11 +17,11 @@ import {
   addEdge,
   XYPosition,
 } from '@xyflow/react';
-import { CustomNodeData } from '@/components/mind-map/CustomNode'; // Adjust path as needed
+import { CustomNodeData } from '@/features/mind-map/components/CustomNode'; // Adjusted path
 import {
   initialNodes as initialNodesData,
   initialEdges as initialEdgesData
-} from '@/components/mind-map/initial-elements'; // Adjust path as needed
+} from '@/features/mind-map/config/initial-elements'; // Adjusted path
 
 // 1. Define the shape of the context value
 export interface MindMapContextType {
@@ -116,9 +116,9 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
       onEdgesChange,
       onConnect,
       selectedNodeId,
-      // setSelectedNodeId is stable from useState
-      setNodes, // Dependency on wrapped setter
-      setEdges, // Dependency on wrapped setter
+      setSelectedNodeId, // Added setSelectedNodeId to dependency array for completeness
+      setNodes,
+      setEdges,
       toggleNodeCollapse,
     ]
   );

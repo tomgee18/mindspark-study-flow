@@ -74,7 +74,7 @@ ${sanitizedText}
         // Consider more specific error messages based on apiError.status or type if available
         throw new Error(`AI service request failed. Please try again later.`);
     }
-    
+
     try {
         const responseText = result.response.text();
         let cleanedJsonString = responseText.replace(/```json/g, '').replace(/```/g, '');

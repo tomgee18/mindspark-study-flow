@@ -8,14 +8,14 @@ import {
   generateExpansionForNode,
   generateQuizFromMindMap,
   QuizQuestion
-} from "@/lib/ai";
+} from "@/features/ai/aiService"; // Updated path
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, Sparkles, Settings, Loader2, HelpCircle } from "lucide-react";
-import { FileControls } from "./FileControls";
-import { AiSettingsDialog } from "./AiSettingsDialog";
-import { QuizDialog } from "../quiz/QuizDialog";
+import { FileControls } from "./FileControls"; // Stays relative
+import { AiSettingsDialog } from "./AiSettingsDialog"; // Stays relative
+import { QuizDialog } from "@/features/quiz/components/QuizDialog"; // Updated path
 import { decryptApiKey } from "@/lib/utils";
-import { initialNodes as defaultInitialNodes, initialEdges as defaultInitialEdges } from "../mind-map/initial-elements";
+import { initialNodes as defaultInitialNodes, initialEdges as defaultInitialEdges } from "@/features/mind-map/config/initial-elements"; // Updated path
 import { useMindMap } from "@/contexts/MindMapContext";
 
 // Props are removed, AppSidebar now uses useMindMap context

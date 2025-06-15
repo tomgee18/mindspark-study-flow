@@ -1,6 +1,6 @@
 
 import React from 'react';
-import Header from '@/components/Header';
+import Header from '@/app/layout/Header'; // Adjusted path
 // AppSidebar will be passed as a prop, so no direct import needed here for rendering.
 import { ReactFlowProvider } from '@xyflow/react';
 
