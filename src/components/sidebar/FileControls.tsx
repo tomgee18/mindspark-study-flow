@@ -1,9 +1,8 @@
-
 import { useCallback, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Upload, FileText, Loader2 } from 'lucide-react';
+import { Download, Upload, FileText, Loader2, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import { generateMindMapFromText } from '@/lib/ai';
@@ -17,7 +16,10 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const { getNodes, getEdges, setNodes, setEdges } = useReactFlow();
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
   const pdfFileInputRef = useRef<HTMLInputElement>(null);
+  const txtFileInputRef = useRef<HTMLInputElement>(null);
+  const mdFileInputRef = useRef<HTMLInputElement>(null);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isTextLoading, setIsTextLoading] = useState(false);
 
   const onExport = useCallback(() => {
     const nodes = getNodes();
@@ -79,6 +81,52 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
 
   const handlePdfImportClick = () => {
     pdfFileInputRef.current?.click();
+  };
+  
+  const handleTxtImportClick = () => {
+    txtFileInputRef.current?.click();
+  };
+  
+  const handleMdImportClick = () => {
+    mdFileInputRef.current?.click();
+  };
+
+  const onTextFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsTextLoading(true);
+    const promise = async () => {
+      try {
+        const textContent = await file.text();
+        if (!textContent.trim()) {
+            throw new Error(`Could not extract text from ${file.name}. The file might be empty.`);
+        }
+        
+        const mindMap = await generateMindMapFromText(textContent);
+
+        setNodes(mindMap.nodes);
+        setEdges(mindMap.edges);
+      } catch(error) {
+        console.error(error);
+        if (error instanceof Error) {
+            throw new Error(error.message || `An unknown error occurred during ${file.name} processing.`);
+        }
+        throw new Error(`An unknown error occurred during ${file.name} processing.`);
+      }
+    };
+
+    toast.promise(promise(), {
+      loading: `Generating mind map from ${file.name}... This may take a moment.`,
+      success: 'Mind map generated successfully!',
+      error: (err) => err.message,
+      finally: () => {
+        setIsTextLoading(false);
+        if (event.target) {
+            event.target.value = '';
+        }
+      }
+    });
   };
 
   const onPdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,13 +192,29 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
           <Upload className="mr-2 h-4 w-4" />
           Import JSON
         </Button>
-        <Button className="w-full" variant="outline" onClick={handlePdfImportClick} disabled={!hasApiKey || isPdfLoading}>
+        <Button className="w-full" variant="outline" onClick={handlePdfImportClick} disabled={!hasApiKey || isPdfLoading || isTextLoading}>
             {isPdfLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
                 <FileText className="mr-2 h-4 w-4" />
             )}
             Import from PDF
+        </Button>
+        <Button className="w-full" variant="outline" onClick={handleTxtImportClick} disabled={!hasApiKey || isPdfLoading || isTextLoading}>
+            {isTextLoading && !isPdfLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <FileText className="mr-2 h-4 w-4" />
+            )}
+            Import from Text
+        </Button>
+        <Button className="w-full" variant="outline" onClick={handleMdImportClick} disabled={!hasApiKey || isPdfLoading || isTextLoading}>
+            {isTextLoading && !isPdfLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <FileCode className="mr-2 h-4 w-4" />
+            )}
+            Import from Markdown
         </Button>
         <input
           type="file"
@@ -165,6 +229,20 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
           onChange={onPdfImport}
           style={{ display: 'none' }}
           accept=".pdf"
+        />
+        <input
+          type="file"
+          ref={txtFileInputRef}
+          onChange={onTextFileImport}
+          style={{ display: 'none' }}
+          accept=".txt"
+        />
+        <input
+          type="file"
+          ref={mdFileInputRef}
+          onChange={onTextFileImport}
+          style={{ display: 'none' }}
+          accept=".md,.markdown"
         />
       </CardContent>
     </Card>
