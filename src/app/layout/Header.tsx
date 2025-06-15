@@ -1,6 +1,6 @@
 
 import { BrainCircuit } from 'lucide-react';
-import { ModeToggle } from './mode-toggle';
+import { ModeToggle } from '@/features/theme/ModeToggle'; // Adjusted path
 
 const Header = () => {
   return (
