@@ -1,14 +1,23 @@
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Upload, FileText } from 'lucide-react';
+import { Download, Upload, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+import { generateMindMapFromText } from '@/lib/ai';
 
-export function FileControls() {
+// Set up the worker for pdfjs-dist from a CDN
+if (typeof window !== 'undefined' && 'Worker' in window) {
+  GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
+}
+
+export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const { getNodes, getEdges, setNodes, setEdges } = useReactFlow();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+  const pdfFileInputRef = useRef<HTMLInputElement>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
 
   const onExport = useCallback(() => {
     const nodes = getNodes();
@@ -32,7 +41,7 @@ export function FileControls() {
     toast.success("Mind map exported successfully!");
   }, [getNodes, getEdges]);
 
-  const onImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onJsonImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -64,8 +73,58 @@ export function FileControls() {
     }
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleJsonImportClick = () => {
+    jsonFileInputRef.current?.click();
+  };
+
+  const handlePdfImportClick = () => {
+    pdfFileInputRef.current?.click();
+  };
+
+  const onPdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsPdfLoading(true);
+    const promise = async () => {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await getDocument(arrayBuffer).promise;
+        let textContent = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const text = await page.getTextContent();
+          textContent += text.items.map((s: any) => s.str).join(' ');
+        }
+
+        if (!textContent.trim()) {
+            throw new Error("Could not extract text from PDF. The document might be empty or image-based.");
+        }
+        
+        const mindMap = await generateMindMapFromText(textContent);
+
+        setNodes(mindMap.nodes);
+        setEdges(mindMap.edges);
+      } catch(error) {
+        console.error(error);
+        if (error instanceof Error) {
+            throw new Error(error.message || 'An unknown error occurred during PDF processing.');
+        }
+        throw new Error('An unknown error occurred during PDF processing.');
+      }
+    };
+
+    toast.promise(promise(), {
+      loading: 'Generating mind map from PDF... This may take a moment.',
+      success: 'Mind map generated successfully!',
+      error: (err) => err.message,
+      finally: () => {
+        setIsPdfLoading(false);
+        if (event.target) {
+            event.target.value = '';
+        }
+      }
+    });
   };
 
   return (
@@ -81,20 +140,31 @@ export function FileControls() {
           <Download className="mr-2 h-4 w-4" />
           Export JSON
         </Button>
-        <Button className="w-full" variant="outline" onClick={handleImportClick}>
+        <Button className="w-full" variant="outline" onClick={handleJsonImportClick}>
           <Upload className="mr-2 h-4 w-4" />
           Import JSON
         </Button>
-        <Button className="w-full" variant="outline" disabled>
-            <FileText className="mr-2 h-4 w-4" />
+        <Button className="w-full" variant="outline" onClick={handlePdfImportClick} disabled={!hasApiKey || isPdfLoading}>
+            {isPdfLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <FileText className="mr-2 h-4 w-4" />
+            )}
             Import from PDF
         </Button>
         <input
           type="file"
-          ref={fileInputRef}
-          onChange={onImport}
+          ref={jsonFileInputRef}
+          onChange={onJsonImport}
           style={{ display: 'none' }}
           accept=".json"
+        />
+        <input
+          type="file"
+          ref={pdfFileInputRef}
+          onChange={onPdfImport}
+          style={{ display: 'none' }}
+          accept=".pdf"
         />
       </CardContent>
     </Card>

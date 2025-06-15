@@ -30,7 +30,7 @@ export function AppSidebar() {
   return (
     <>
       <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6">
-        <FileControls />
+        <FileControls hasApiKey={hasApiKey} />
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
