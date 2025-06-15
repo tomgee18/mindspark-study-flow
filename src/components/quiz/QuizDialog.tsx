@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area'; // For potentially long quizzes
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // For displaying results
 import { CheckCircle, XCircle, HelpCircle } from 'lucide-react';
-import { QuizQuestion } from '@/lib/ai'; // Assuming QuizQuestion is exported from ai.ts
+import { QuizQuestion } from '@/features/ai/aiService'; // Assuming QuizQuestion is exported from ai.ts
 
 interface QuizDialogProps {
   open: boolean;

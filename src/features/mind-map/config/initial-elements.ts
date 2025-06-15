@@ -1,6 +1,6 @@
 
 import { Edge, Node } from '@xyflow/react';
-import { CustomNodeData } from './CustomNode';
+import { CustomNodeData } from '../components/CustomNode';
 
 export const initialNodes: Node<CustomNodeData>[] = [
   {
@@ -24,7 +24,7 @@ export const initialNodes: Node<CustomNodeData>[] = [
   {
     id: '4',
     type: 'custom',
-    data: { label: 'Example: Spam Detection', type: 'example', isCollapsed: true }, // Example of a collapsed node
+    data: { label: 'Example: Spam Detection', type: 'example', isCollapsed: true },
     position: { x: 100, y: 200 },
   },
 ];

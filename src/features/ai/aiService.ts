@@ -1,7 +1,6 @@
-
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { Edge, Node } from '@xyflow/react';
-import { CustomNodeData } from "@/components/mind-map/CustomNode";
+import { CustomNodeData } from "@/features/mind-map/components/CustomNode";
 import { sanitizeText, decryptApiKey, checkRateLimit } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";

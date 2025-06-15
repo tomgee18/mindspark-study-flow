@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,16 +12,16 @@ import {
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area'; // For potentially long quizzes
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // For displaying results
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, XCircle, HelpCircle } from 'lucide-react';
-import { QuizQuestion } from '@/lib/ai'; // Assuming QuizQuestion is exported from ai.ts
+import { QuizQuestion } from '@/features/ai/aiService';
 
 interface QuizDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quizQuestions: QuizQuestion[];
-  mindMapTitle?: string; // Optional: to display as context for the quiz
+  mindMapTitle?: string;
 }
 
 type UserAnswer = string | null;
@@ -42,7 +43,6 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
 
   useEffect(() => {
     if (open) {
-      // Reset state when dialog opens
       setUserAnswers(new Array(quizQuestions.length).fill(null));
       setSubmitted(false);
       setResults(null);
@@ -51,7 +51,7 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
   }, [open, quizQuestions]);
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
-    if (submitted) return; // Don't allow changes after submission
+    if (submitted) return;
     const newAnswers = [...userAnswers];
     newAnswers[questionIndex] = answer;
     setUserAnswers(newAnswers);
@@ -59,7 +59,6 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
 
   const handleSubmit = () => {
     if (userAnswers.some(answer => answer === null)) {
-        // Or use a toast notification
       alert("Please answer all questions before submitting.");
       return;
     }
