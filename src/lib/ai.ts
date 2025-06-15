@@ -1,9 +1,10 @@
-
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { Edge, Node } from '@xyflow/react';
 import { CustomNodeData } from "@/components/mind-map/CustomNode";
+import { sanitizeText } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
+const MAX_TEXT_LENGTH = 50000; // 50k characters limit for input
 
 type MindMapFlow = {
     nodes: Node<CustomNodeData>[];
@@ -11,6 +12,15 @@ type MindMapFlow = {
 }
 
 export async function generateMindMapFromText(text: string): Promise<MindMapFlow> {
+    if (text.length > MAX_TEXT_LENGTH) {
+        throw new Error(`Input text is too long. Please provide text with less than ${MAX_TEXT_LENGTH} characters.`);
+    }
+
+    const sanitizedText = sanitizeText(text);
+    if (!sanitizedText.trim()) {
+        throw new Error("Input text is empty after sanitization.");
+    }
+
     const apiKey = localStorage.getItem('googleAiApiKey');
     if (!apiKey) {
         throw new Error("Google AI API key not found. Please set it in the AI Settings.");
@@ -43,7 +53,7 @@ Ensure the output is a valid JSON object and nothing else. Do not add any commen
 
 Here is the text:
 ---
-${text}
+${sanitizedText}
 ---
 `;
     

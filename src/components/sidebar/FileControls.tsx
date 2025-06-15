@@ -12,6 +12,8 @@ if (typeof window !== 'undefined' && 'Worker' in window) {
   GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
 }
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const { getNodes, getEdges, setNodes, setEdges } = useReactFlow();
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +48,12 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const onJsonImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("File is too large (max 10MB).");
+        if(event.target) event.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result;
@@ -95,6 +103,12 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File is too large (max 10MB).");
+      if (event.target) event.target.value = '';
+      return;
+    }
+
     setIsTextLoading(true);
     const promise = async () => {
       try {
@@ -132,6 +146,12 @@ export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
   const onPdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File is too large (max 10MB).");
+      if (event.target) event.target.value = '';
+      return;
+    }
 
     setIsPdfLoading(true);
     const promise = async () => {
