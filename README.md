@@ -1,10 +1,31 @@
-# Welcome to your Lovable project
 
-## Project info
+# AI-Powered Mind Map Generator
 
-**URL**: https://lovable.dev/projects/a7a1ee3b-e9ea-4bd6-bd9f-c0aa78983493
+This is an interactive mind mapping tool that leverages AI to automatically generate, visualize, and organize ideas from various sources. It's designed to help users quickly brainstorm and structure information from documents, text, or simple topics.
 
-## How can I edit this code?
+## ✨ Features
+
+- **Interactive Mind Map Interface**: A smooth, pannable, and zoomable canvas to view and organize your mind map.
+- **AI-Powered Generation**:
+  - **Import from PDF**: Upload a PDF file and have the AI generate a structured mind map from its content.
+  - **Import from Text/Markdown**: Generate a mind map directly from `.txt` or `.md` files.
+- **File Management**:
+  - **Export to JSON**: Save your mind map structure as a JSON file.
+  - **Import from JSON**: Load a previously exported mind map back into the application.
+- **Secure API Key Handling**: Your Google AI API key is encrypted and stored securely in your browser's local storage.
+- **Modern Tech Stack**: Built with React, Vite, TypeScript, and Tailwind CSS for a fast and responsive user experience.
+
+## 🚀 How to Use
+
+1.  **Set Your API Key**: Click the **Settings** icon (⚙️) in the "AI Assistant" card, enter your Google AI API key, and save it. This is required for all AI-powered features.
+2.  **Generate a Mind Map**:
+    - Use the "Import from PDF", "Import from Text", or "Import from Markdown" buttons to upload a file.
+    - The AI will process the content and generate a mind map on the canvas.
+3.  **Manage Your Mind Map**:
+    - Use the "Export JSON" button to save your work.
+    - Use the "Import JSON" button to load a saved mind map.
+
+## 🛠️ How to Edit This Code
 
 There are several ways of editing your application.
 
@@ -50,24 +71,15 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
+## 💻 Technologies Used
 
 This project is built with:
 
 - Vite
 - TypeScript
 - React
-- shadcn-ui
+- shadcn/ui
 - Tailwind CSS
+- React Flow for the mind map interface
+- Google Gemini for AI features
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/a7a1ee3b-e9ea-4bd6-bd9f-c0aa78983493) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
