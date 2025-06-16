@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -57,7 +56,13 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const onConnect = useCallback(
-    (params: Connection | Edge) => setEdgesState((eds) => addEdge(params, eds)),
+    (params: Connection | Edge) => {
+      const newEdge = {
+        ...params,
+        label: '', // Default empty label
+      };
+      setEdgesState((eds) => addEdge(newEdge, eds));
+    },
     [setEdgesState]
   );
 
@@ -118,6 +123,7 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
       {children}
     </MindMapContext.Provider>
   );
+<<<<<<< HEAD
 };
 
 import React, {
@@ -259,3 +265,6 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
     </MindMapContext.Provider>
   );
 };
+=======
+};
+>>>>>>> 6c7933edae1ac66e8bcba74188dde438a451b494
