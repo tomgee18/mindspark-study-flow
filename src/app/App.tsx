@@ -33,7 +33,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<AppLayout><Index /></AppLayout>} />
-              <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
