@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -57,7 +56,13 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const onConnect = useCallback(
-    (params: Connection | Edge) => setEdgesState((eds) => addEdge(params, eds)),
+    (params: Connection | Edge) => {
+      const newEdge = {
+        ...params,
+        label: '', // Default empty label
+      };
+      setEdgesState((eds) => addEdge(newEdge, eds));
+    },
     [setEdgesState]
   );
 
