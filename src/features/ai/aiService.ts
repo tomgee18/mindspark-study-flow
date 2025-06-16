@@ -246,6 +246,72 @@ Example of expected JSON output format:
 }
 
 
+export async function generateSummaryFromNodes(
+    nodes: Node<CustomNodeData>[],
+    title: string
+): Promise<string> {
+    const rateLimitResult = checkRateLimit('ai_summary');
+    if (!rateLimitResult.allowed) {
+        throw new Error(`Rate limit exceeded for summary generation. Please try again in ${rateLimitResult.retryAfter} seconds.`);
+    }
+
+    const apiKey = await decryptApiKey();
+    if (!apiKey) {
+        throw new Error("Google AI API key not found. Please set it in the AI Settings.");
+    }
+
+    // Prepare node data for the prompt
+    let nodeContent = "";
+    nodes.forEach(node => {
+        nodeContent += `- ${node.data.type.toUpperCase()}: ${node.data.label}\n`;
+    });
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+
+    const generationConfig = {
+        temperature: 0.4,
+        topK: 1,
+        topP: 1,
+        maxOutputTokens: 4096,
+    };
+
+    const safetySettings = [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    ];
+
+    const prompt = `You are an expert at summarizing and synthesizing information. Based on the following mind map nodes, create a comprehensive summary that explains the topic and connects the key concepts.
+
+Mind Map Title: ${title}
+
+Mind Map Nodes:
+${nodeContent}
+
+Please provide a well-structured summary that:
+1. Introduces the main topic
+2. Explains key concepts and their relationships
+3. Synthesizes the information into a coherent narrative
+4. Concludes with the most important takeaways
+
+Format the summary with appropriate paragraphs and structure. The summary should be informative and educational.`;
+
+    try {
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig,
+            safetySettings,
+        });
+
+        return result.response.text();
+    } catch (error: any) {
+        console.error("Error generating summary:", error);
+        throw new Error(`Failed to generate summary: ${error.message}`);
+    }
+}
+
 export async function generateExpansionForNode(
     parentNode: Node<CustomNodeData>,
     // allNodes: Node<CustomNodeData>[], // For future context if needed
