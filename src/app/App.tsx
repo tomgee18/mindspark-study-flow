@@ -9,15 +9,18 @@ import NotFound from "@/pages/NotFound";
 import MainLayout from "@/app/layout/MainLayout";
 import { ThemeProvider } from "@/app/theme-provider";
 import { AppSidebar } from "@/features/sidebar/components/AppSidebar";
+import { MindMapProvider } from "@/contexts/MindMapContext";
 
 const queryClient = new QueryClient();
 
 // Layout wrapper to avoid repeating MainLayout with AppSidebar
 const AppLayout = ({ children }: { children: React.ReactNode }) => (
-  <MainLayout 
-    sidebar={<AppSidebar />} 
-    mainContent={children} 
-  />
+  <MindMapProvider>
+    <MainLayout 
+      sidebar={<AppSidebar />} 
+      mainContent={children} 
+    />
+  </MindMapProvider>
 );
 
 const App = () => (
