@@ -1,11 +1,12 @@
+
 import { useRef, Dispatch, SetStateAction } from 'react';
-import { useReactFlow } from '@xyflow/react';
+import { useMindMap } from '@/contexts/MindMapContext';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateMindMapFromText } from '@/features/ai/aiService';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // Increased to 50 MB
 
 type LoadingType = null | 'pdf' | 'text';
 
@@ -16,7 +17,7 @@ interface TextImportProps {
 }
 
 export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImportProps) {
-  const { setNodes, setEdges } = useReactFlow();
+  const { setNodes, setEdges } = useMindMap();
   const txtFileInputRef = useRef<HTMLInputElement>(null);
   const mdFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,14 +33,17 @@ export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImpor
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'text/plain' && file.type !== 'text/markdown') {
+    const isTextFile = file.type === 'text/plain' || file.name.endsWith('.txt');
+    const isMarkdownFile = file.type === 'text/markdown' || file.name.endsWith('.md') || file.name.endsWith('.markdown');
+
+    if (!isTextFile && !isMarkdownFile) {
         toast.error("Invalid file type. Please upload a .txt or .md file.");
         if (event.target) event.target.value = '';
         return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      toast.error("File is too large (max 10MB).");
+      toast.error("File is too large (max 50MB).");
       if (event.target) event.target.value = '';
       return;
     }
@@ -47,27 +51,35 @@ export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImpor
     setLoadingType('text');
     const promise = async () => {
       try {
+        console.log(`Processing ${file.name}...`);
         const textContent = await file.text();
+        console.log(`File content length: ${textContent.length} characters`);
+        
         if (!textContent.trim()) {
-            throw new Error(`Could not extract text from ${file.name}. The file might be empty.`);
+            throw new Error(`Could not extract text from ${file.name}. The file appears to be empty.`);
+        }
+
+        if (textContent.length < 10) {
+            throw new Error(`${file.name} contains very little content. Please ensure the file has meaningful text.`);
         }
         
+        console.log("Sending text to AI for mind map generation...");
         const mindMap = await generateMindMapFromText(textContent);
 
         setNodes(mindMap.nodes);
         setEdges(mindMap.edges);
       } catch(error) {
-        console.error(error);
+        console.error(`Text file processing error:`, error);
         if (error instanceof Error) {
-            throw new Error(error.message || `An unknown error occurred during ${file.name} processing.`);
+            throw new Error(error.message || `An error occurred while processing ${file.name}.`);
         }
-        throw new Error(`An unknown error occurred during ${file.name} processing.`);
+        throw new Error(`An unknown error occurred while processing ${file.name}.`);
       }
     };
 
     toast.promise(promise(), {
-      loading: `Generating mind map from ${file.name}... This may take a moment.`,
-      success: 'Mind map generated successfully!',
+      loading: `Analyzing ${file.name} and generating mind map... This may take a moment.`,
+      success: 'Mind map generated successfully from text file!',
       error: (err) => err.message,
       finally: () => {
         setLoadingType(null);

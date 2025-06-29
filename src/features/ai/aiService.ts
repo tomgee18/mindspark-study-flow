@@ -4,7 +4,7 @@ import { CustomNodeData } from "@/features/mind-map/components/CustomNode";
 import { sanitizeText, decryptApiKey, checkRateLimit } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
-const MAX_TEXT_LENGTH = 50000; // 50k characters limit for input
+const MAX_TEXT_LENGTH = 100000; // Increased from 50k to 100k characters
 
 type MindMapFlow = {
     nodes: Node<CustomNodeData>[];
@@ -35,7 +35,7 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
     const generationConfig = {
-        temperature: 0.9,
+        temperature: 1.0, // Increased for more creative and detailed responses
         topK: 1,
         topP: 1,
         maxOutputTokens: 8192,
@@ -48,19 +48,33 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     ];
 
-    const prompt = `You are a mind map generation expert. Based on the following text, generate a mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
-Each node must have an 'id' (string), 'type: "custom"', 'position' ({x: number, y: number}), and 'data' object. The 'data' object must have a 'label' (string) and a 'type' (string).
-The node 'type' in the 'data' object must be one of the following: 'topic', 'definition', 'explanation', 'critical-point', 'example'.
+    const prompt = `You are a mind map generation expert. Based on the following text, generate a comprehensive mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
+
+IMPORTANT: Each node must contain DETAILED, INFORMATIVE content - not just headings or topic titles. Provide substantive explanations, definitions, examples, and insights.
+
+Each node must have an 'id' (string), 'type: "custom"', 'position' ({x: number, y: number}), and 'data' object. The 'data' object must have:
+- 'label' (string): A DETAILED explanation or description (2-4 sentences), NOT just a heading
+- 'type' (string): One of 'topic', 'definition', 'explanation', 'critical-point', 'example'
+
+Guidelines for node content:
+- 'topic' nodes: Provide a comprehensive overview with context and significance
+- 'definition' nodes: Include full definitions with examples and context
+- 'explanation' nodes: Offer detailed explanations of processes, concepts, or relationships
+- 'critical-point' nodes: Highlight key insights, implications, or important facts
+- 'example' nodes: Provide specific, detailed examples with explanations
+
 The root node should be of type 'topic' and positioned at { x: 0, y: 0 }.
-Position the other nodes in a hierarchical layout around the root node, ensuring there are no overlaps.
+Position other nodes in a hierarchical layout around the root node with adequate spacing (200-300 pixels between nodes).
 Each edge must have an 'id' (string), 'source' (source node id as a string), and 'target' (target node id as a string).
+
 Ensure the output is a valid JSON object and nothing else. Do not add any commentary or wrap it in markdown backticks.
 
-Here is the text:
+Here is the text to analyze:
 ---
 ${sanitizedText}
 ---
 `;
+
     let result;
     try {
         result = await model.generateContent({
@@ -69,38 +83,51 @@ ${sanitizedText}
             safetySettings,
         });
     } catch (apiError: any) {
-        console.error("Google AI API error (generateMindMapFromText):", apiError.message);
-        // Consider more specific error messages based on apiError.status or type if available
-        throw new Error(`AI service request failed. Please try again later.`);
+        console.error("Google AI API error (generateMindMapFromText):", apiError);
+        throw new Error(`AI service temporarily unavailable. Please try again in a few moments.`);
     }
 
     try {
         const responseText = result.response.text();
+        console.log("Raw AI response:", responseText); // Debug logging
+        
         let cleanedJsonString = responseText.replace(/```json/g, '').replace(/```/g, '');
         const jsonStartIndex = cleanedJsonString.indexOf('{');
         const jsonEndIndex = cleanedJsonString.lastIndexOf('}');
+        
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
             cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1);
         } else {
-            console.error("Raw AI response (generateMindMapFromText):", responseText);
-            throw new Error("The AI returned an unreadable mind map format. Please try again.");
+            console.error("Could not extract JSON from AI response:", responseText);
+            throw new Error("AI response format error. Please try again with different input.");
         }
 
         const flow = JSON.parse(cleanedJsonString);
-        if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges)) {
-            return flow;
+        
+        if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges) && flow.nodes.length > 0) {
+            // Validate node structure
+            const validatedNodes = flow.nodes.map((node: any, index: number) => ({
+                ...node,
+                id: node.id || `node-${index}`,
+                type: 'custom',
+                position: node.position || { x: index * 200, y: index * 100 },
+                data: {
+                    label: node.data?.label || 'Untitled Node',
+                    type: node.data?.type || 'explanation',
+                }
+            }));
+            
+            return { nodes: validatedNodes, edges: flow.edges };
         } else {
-            console.error("Invalid JSON structure from AI (generateMindMapFromText):", cleanedJsonString);
-            throw new Error("The AI's mind map data is incomplete. Please try again.");
+            console.error("Invalid mind map structure:", flow);
+            throw new Error("Generated mind map structure is incomplete. Please try again.");
         }
     } catch (e: any) {
-        // This catch block now primarily handles errors from JSON.parse or our direct throws.
-        console.error("Failed to parse AI response (generateMindMapFromText):", e.message);
-        // If it's one of our new Errors, rethrow it. Otherwise, wrap it.
-        if (e.message.startsWith("The AI returned") || e.message.startsWith("The AI's mind map data")) {
+        console.error("Failed to parse AI response:", e.message);
+        if (e.message.includes("AI response format") || e.message.includes("Generated mind map")) {
             throw e;
         }
-        throw new Error("The AI returned an unreadable mind map format. Please try again.");
+        throw new Error("Unable to process AI response. Please try again with clearer input text.");
     }
 }
 
@@ -244,7 +271,6 @@ Example of expected JSON output format:
         throw new Error(`Failed to parse quiz from AI response: ${e.message}`);
     }
 }
-
 
 export async function generateSummaryFromNodes(
     nodes: Node<CustomNodeData>[],
