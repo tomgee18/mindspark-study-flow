@@ -1,11 +1,10 @@
-
 import { useRef, Dispatch, SetStateAction } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import { generateMindMapFromText } from '@/lib/ai';
+import { generateMindMapFromText } from '@/features/ai/aiService';
 
 if (typeof window !== 'undefined' && 'Worker' in window) {
   GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;

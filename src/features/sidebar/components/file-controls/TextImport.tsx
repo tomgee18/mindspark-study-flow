@@ -1,10 +1,9 @@
-
 import { useRef, Dispatch, SetStateAction } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateMindMapFromText } from '@/lib/ai';
+import { generateMindMapFromText } from '@/features/ai/aiService';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 

@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -51,7 +52,7 @@ interface MindMapProviderProps {
 }
 
 export const MindMapProvider = ({ children }: MindMapProviderProps) => {
-  const [nodes, setNodesState, onNodesChange] = useNodesState<CustomNodeData>(initialNodesData);
+  const [nodes, setNodesState, onNodesChange] = useNodesState(initialNodesData);
   const [edges, setEdgesState, onEdgesChange] = useEdgesState(initialEdgesData);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -69,10 +70,10 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
   const toggleNodeCollapse = useCallback(
     (nodeId: string) => {
       setNodesState((currentNodes) =>
-        currentNodes.map((n) =>
-          n.id === nodeId
-            ? { ...n, data: { ...n.data, isCollapsed: !(n.data.isCollapsed ?? false) } }
-            : n
+        currentNodes.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, isCollapsed: !(node.data.isCollapsed ?? false) } }
+            : node
         )
       );
     },
