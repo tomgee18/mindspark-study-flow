@@ -7,11 +7,15 @@ import { toast } from 'sonner';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import { generateMindMapFromText } from '@/features/ai/aiService';
 
-if (typeof window !== 'undefined' && 'Worker' in window) {
-  GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.mjs`;
+// Use a more reliable worker setup
+if (typeof window !== 'undefined') {
+  GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).toString();
 }
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // Increased to 50 MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
 type LoadingType = null | 'pdf' | 'text';
 
@@ -50,7 +54,15 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
       try {
         console.log("Starting PDF processing...");
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await getDocument(arrayBuffer).promise;
+        
+        // Create a more robust PDF loading configuration
+        const loadingTask = getDocument({
+          data: arrayBuffer,
+          useSystemFonts: true,
+          standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/standard_fonts/',
+        });
+        
+        const pdf = await loadingTask.promise;
         console.log(`PDF loaded successfully. Pages: ${pdf.numPages}`);
         
         let textContent = '';
@@ -59,16 +71,17 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
           const page = await pdf.getPage(i);
           const text = await page.getTextContent();
           
-          // Improved text extraction with proper spacing
+          // Improved text extraction with proper spacing and line breaks
           const pageText = text.items
             .map((item: any) => {
-              if (item.str) {
+              if (item.str && item.str.trim()) {
                 return item.str;
               }
               return '';
             })
-            .filter(str => str.trim().length > 0)
-            .join(' ');
+            .filter(str => str.length > 0)
+            .join(' ')
+            .replace(/\s+/g, ' '); // Normalize whitespace
           
           if (pageText.trim()) {
             textContent += pageText + '\n\n';
@@ -81,7 +94,7 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
             throw new Error("Could not extract text from PDF. The document might be empty, image-based, or protected.");
         }
 
-        if (textContent.length < 50) {
+        if (textContent.length < 100) {
             throw new Error("PDF contains very little text content. Please ensure the PDF has readable text.");
         }
         
