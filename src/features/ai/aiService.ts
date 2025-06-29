@@ -5,7 +5,7 @@ import { CustomNodeData } from "@/features/mind-map/components/CustomNode"; // U
 import { sanitizeText, decryptApiKey, checkRateLimit } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
-const MAX_TEXT_LENGTH = 50000; // 50k characters limit for input
+const MAX_TEXT_LENGTH = 1000000; // Changed to 1 million characters
 
 type MindMapFlow = {
     nodes: Node<CustomNodeData>[];

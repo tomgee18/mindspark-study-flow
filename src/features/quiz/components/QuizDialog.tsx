@@ -92,7 +92,8 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[900px]">
+      {/* Updated DialogContent classes for max height and flex layout */}
+      <DialogContent className="sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{mindMapTitle} - Quiz</DialogTitle>
           {submitted && results ? (
@@ -106,8 +107,9 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
           )}
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] p-4">
-          <div className="space-y-6">
+        {/* Updated ScrollArea classes to use flex-grow and consistent padding */}
+        <ScrollArea className="flex-grow my-4">
+          <div className="space-y-6 pr-6"> {/* Added pr-6 to the content div inside ScrollArea */}
             {quizQuestions.map((q, index) => (
               <div key={index} className={`p-4 rounded-lg border ${
                 submitted && results && results[index] ? (results[index].isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-red-500 bg-red-50 dark:bg-red-900/30') : 'border-border'
@@ -154,7 +156,8 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
           </div>
         </ScrollArea>
 
-        <DialogFooter className="mt-6">
+        {/* Added mt-auto to DialogFooter for better positioning with flex-col */}
+        <DialogFooter className="mt-auto pt-4"> {/* Added pt-4 for spacing from scroll area */}
           {!submitted ? (
             <Button onClick={handleSubmit} disabled={userAnswers.some(a => a === null)}>Submit Answers</Button>
           ) : (

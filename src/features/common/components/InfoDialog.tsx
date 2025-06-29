@@ -25,13 +25,14 @@ export function InfoDialog({ open, onOpenChange, title, content }: InfoDialogPro
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-grow my-4 pr-6">
-          {/* Using whitespace-pre-line to respect newlines in the content string */}
-          <div style={{ whiteSpace: 'pre-line' }}>
+        {/* ScrollArea takes up available space. Padding for content should be inside. */}
+        <ScrollArea className="flex-grow my-4">
+          {/* Using whitespace-pre-line to respect newlines. pr-6 to avoid content touching scrollbar. */}
+          <div className="pr-6" style={{ whiteSpace: 'pre-line' }}>
             {content}
           </div>
         </ScrollArea>
-        <DialogFooter className="mt-auto">
+        <DialogFooter className="mt-auto"> {/* mt-auto pushes footer to bottom if content is short */}
           <DialogClose asChild>
             <Button type="button" variant="outline">
               Close

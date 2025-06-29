@@ -183,7 +183,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6">
+      <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6 overflow-y-auto">
         <FileControls hasApiKey={hasApiKey} />
         {/* Removed onNewMindMap prop */}
 
