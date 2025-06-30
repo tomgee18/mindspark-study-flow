@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import { generateMindMapFromText } from '@/lib/ai';
+import { generateMindMapFromText } from '@/features/ai/aiService';
+import { sanitizeText } from '@/lib/utils'; // Import sanitizeText
 
 if (typeof window !== 'undefined' && 'Worker' in window) {
   GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
@@ -51,17 +52,31 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await getDocument(arrayBuffer).promise;
         let textContent = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const text = await page.getTextContent();
-          textContent += text.items.map((s: any) => s.str).join(' ');
+        try { // Wrap pdf.js operations in their own try-catch for specific logging
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const text = await page.getTextContent();
+              textContent += text.items.map((s: any) => s.str).join(' ');
+              textContent += '\n'; // Add newline between pages
+            }
+        } catch (pdfParseError) {
+            console.error("Error during PDF text extraction (pdfjs-dist):", pdfParseError);
+            // Re-throw or throw a new specific error to be caught by the outer promise handler
+            throw new Error("Failed to extract text content from PDF pages.");
         }
 
-        if (!textContent.trim()) {
-            throw new Error("Could not extract text from PDF. The document might be empty or image-based.");
+        console.log("Raw text extracted from PDF (length):", textContent.length);
+        console.log("First 500 chars of raw PDF text:", textContent.substring(0, 500));
+        const sanitizedTextForAI = sanitizeText(textContent);
+        console.log("Sanitized text for AI (from PDF, length):", sanitizedTextForAI.length);
+        console.log("First 500 chars of sanitized PDF text for AI:", sanitizedTextForAI.substring(0, 500));
+
+        if (!sanitizedTextForAI.trim()) { // Check sanitized text
+            throw new Error("Could not extract usable text from PDF. The document might be empty or image-based after sanitization.");
         }
         
-        const mindMap = await generateMindMapFromText(textContent);
+        // Ensure generateMindMapFromText is called with sanitizedTextForAI
+        const mindMap = await generateMindMapFromText(sanitizedTextForAI);
 
         setNodes(mindMap.nodes);
         setEdges(mindMap.edges);

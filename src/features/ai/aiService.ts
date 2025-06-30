@@ -19,7 +19,7 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
     }
 
     if (text.length > MAX_TEXT_LENGTH) {
-        throw new Error(`Input text is too long. Please provide text with less than ${MAX_TEXT_LENGTH} characters.`);
+        throw new Error(`Input text is too long (${text.length} characters). Please provide text with less than ${MAX_TEXT_LENGTH} characters (current limit: ${MAX_TEXT_LENGTH}).`);
     }
 
     const sanitizedText = sanitizeText(text);
@@ -50,10 +50,24 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
     ];
 
     const prompt = `You are a mind map generation expert. Based on the following text, generate a mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
-Each node must have an 'id' (string), 'type: "custom"', 'position' ({x: number, y: number}), and 'data' object. The 'data' object must have a 'label' (string) and a 'type' (string).
-The node 'type' in the 'data' object must be one of the following: 'topic', 'definition', 'explanation', 'critical-point', 'example'.
-The root node should be of type 'topic' and positioned at { x: 0, y: 0 }.
-Position the other nodes in a hierarchical layout around the root node, ensuring there are no overlaps.
+Each node must have an 'id' (string), 'type': "custom", 'position' ({x: number, y: number}), and 'data' object.
+
+The main subject of the text should be designated as the single root node. This root node must:
+1.  Have the type 'topic'.
+2.  Be positioned exactly at { "x": 0, "y": 0 }.
+3.  Have its 'label' clearly represent the main subject.
+
+All other generated nodes must be descendants of this root node, forming a clear hierarchical tree structure.
+-   Position immediate children of the root node directly below it (e.g., y-coordinate significantly greater than 0, like 100 or 150) and spread them out horizontally to avoid overlap.
+-   Subsequent levels of nodes should also be positioned hierarchically below their parent nodes.
+-   Critically ensure there are no disconnected nodes or nodes floating randomly. Every node (except the root) must have a parent and be part of the hierarchy stemming from the root.
+-   Maintain reasonable spacing between nodes to prevent visual clutter and ensure no overlaps.
+
+For the 'data' object of each node (including the root):
+-   'label': A concise string label for the concept.
+-   'type': One of 'topic' (only for the root node), 'definition', 'explanation', 'critical-point', 'example'.
+-   'details': An optional string. If provided, this should be a very brief, 1-2 sentence summary or a few key bullet points providing essential context for the node's label. Focus on core information only.
+
 Each edge must have an 'id' (string), 'source' (source node id as a string), and 'target' (target node id as a string).
 Ensure the output is a valid JSON object and nothing else. Do not add any commentary or wrap it in markdown backticks.
 
@@ -141,7 +155,7 @@ export async function generateSummaryFromNodes(
     });
 
     if (contentToSummarize.length > MAX_TEXT_LENGTH) {
-        throw new Error(`Content is too long to summarize. Please select fewer nodes or a smaller branch. (Length: ${contentToSummarize.length}/${MAX_TEXT_LENGTH})`);
+        throw new Error(`Content is too long to summarize (${contentToSummarize.length} characters). Limit is ${MAX_TEXT_LENGTH} characters (current limit: ${MAX_TEXT_LENGTH}). Please select fewer nodes or a smaller branch.`);
     }
     if (!contentToSummarize.trim()) {
          throw new Error("Selected nodes have no content to summarize.");
@@ -246,8 +260,8 @@ export async function generateQuizFromMindMap(
         throw new Error("Cannot generate quiz from an empty mind map.");
     }
     // Basic check for prompt length, this is a rough estimate
-    if (mindMapPromptData.length > MAX_TEXT_LENGTH / 2) { // Reserve half for other parts of prompt
-         throw new Error("Mind map data is too large to generate a quiz. Please simplify the mind map.");
+    if (mindMapPromptData.length > MAX_TEXT_LENGTH / 2) {
+         throw new Error(`Mind map data is too large for quiz generation (${mindMapPromptData.length} characters). Approximate limit for content is ${Math.floor(MAX_TEXT_LENGTH / 2)} characters (current limit: ${Math.floor(MAX_TEXT_LENGTH / 2)}). Please simplify the mind map.`);
     }
 
 
@@ -395,6 +409,7 @@ For each new child node, provide:
 - 'data': An object with:
     - 'label': A concise string label for the new concept.
     - 'type': One of 'definition', 'explanation', 'critical-point', 'example'. Do not use 'topic' for these child nodes.
+    - 'details': An optional string. If provided, this should be a very concise 1-sentence explanation or a key aspect of the label. Max 1-2 short sentences. Often, no details are needed if the label is self-explanatory.
 
 Also, generate new edges to connect the parent node to these new child nodes. Each edge should have:
 - 'id': A unique string ID (e.g., "e-${parentNode.id}-child1").
@@ -445,19 +460,22 @@ Example of expected JSON output format:
                 type: 'custom', // Enforce custom type
                 data: {
                     label: node.data?.label || 'Untitled',
-                    type: node.data?.type || 'explanation', // Default type
-                    isCollapsed: false, // New nodes are not collapsed
+                    type: node.data?.type || 'explanation',
+                    details: node.data?.details || undefined, // Add this line
+                    isCollapsed: false,
                 } as CustomNodeData,
                 position: node.position || { x: parentPosition.x, y: parentPosition.y + 100 + (Math.random() * 50) }, // Fallback positioning
             }));
             return { newNodes: validatedNodes, newEdges: flow.edges };
         } else {
-            console.error("Raw AI response for expansion:", responseText);
-            throw new Error('Invalid JSON structure for node expansion from AI (nodes or edges array missing).');
+            console.error("Invalid JSON structure for expansion (generateExpansionForNode):", cleanedJsonString);
+            throw new Error("The AI's expansion data is incomplete. Please try again.");
         }
     } catch (e: any) {
-        console.error("Failed to parse AI expansion response:", e.message);
-        console.error("Raw AI response text for expansion:", result.response.text());
-        throw new Error(`Failed to parse node expansion from AI response: ${e.message}`);
+        console.error("Failed to parse AI expansion response (generateExpansionForNode):", e.message);
+        if (e.message.startsWith("The AI returned") || e.message.startsWith("The AI's expansion data")) {
+            throw e;
+        }
+        throw new Error("The AI returned an unreadable expansion format. Please try again.");
     }
 }

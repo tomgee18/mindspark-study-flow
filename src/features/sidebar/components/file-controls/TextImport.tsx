@@ -4,7 +4,8 @@ import { useReactFlow } from '@xyflow/react';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateMindMapFromText } from '@/lib/ai';
+import { generateMindMapFromText } from '@/features/ai/aiService'; // Corrected import path
+import { sanitizeText } from '@/lib/utils'; // Import sanitizeText
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -49,11 +50,18 @@ export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImpor
     const promise = async () => {
       try {
         const textContent = await file.text();
-        if (!textContent.trim()) {
-            throw new Error(`Could not extract text from ${file.name}. The file might be empty.`);
+        console.log(`Raw text from ${file.name} (length):`, textContent.length);
+        console.log(`First 500 chars of raw text from ${file.name}:`, textContent.substring(0, 500));
+        const sanitizedTextForAI = sanitizeText(textContent);
+        console.log(`Sanitized text for AI (from ${file.name}, length):`, sanitizedTextForAI.length);
+        console.log(`First 500 chars of sanitized text from ${file.name} for AI:`, sanitizedTextForAI.substring(0, 500));
+
+        if (!sanitizedTextForAI.trim()) { // Check sanitized text
+            throw new Error(`Could not extract usable text from ${file.name}. The file might be empty or its content was removed by sanitization.`);
         }
         
-        const mindMap = await generateMindMapFromText(textContent);
+        // Ensure generateMindMapFromText is called with sanitizedTextForAI
+        const mindMap = await generateMindMapFromText(sanitizedTextForAI);
 
         setNodes(mindMap.nodes);
         setEdges(mindMap.edges);
