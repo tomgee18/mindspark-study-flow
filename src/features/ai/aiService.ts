@@ -4,7 +4,7 @@ import { CustomNodeData } from "@/features/mind-map/components/CustomNode";
 import { sanitizeText, decryptApiKey, checkRateLimit } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
-const MAX_TEXT_LENGTH = 100000; // Increased from 50k to 100k characters
+const MAX_TEXT_LENGTH = 500000; // Increased from 100k to 500k characters
 
 type MindMapFlow = {
     nodes: Node<CustomNodeData>[];
@@ -18,10 +18,16 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
     }
 
     if (text.length > MAX_TEXT_LENGTH) {
-        throw new Error(`Input text is too long. Please provide text with less than ${MAX_TEXT_LENGTH} characters.`);
+        throw new Error(`Input text is too long. Please provide text with less than ${MAX_TEXT_LENGTH.toLocaleString()} characters.`);
     }
 
-    const sanitizedText = sanitizeText(text);
+    // Optimize text by removing excessive whitespace and redundant content
+    const optimizedText = text
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/\n{3,}/g, '\n\n') // Reduce excessive line breaks
+        .trim();
+
+    const sanitizedText = sanitizeText(optimizedText);
     if (!sanitizedText.trim()) {
         throw new Error("Input text is empty after sanitization.");
     }
@@ -35,7 +41,7 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
     const generationConfig = {
-        temperature: 1.0, // Increased for more creative and detailed responses
+        temperature: 0.8, // Reduced from 1.0 for more focused responses
         topK: 1,
         topP: 1,
         maxOutputTokens: 8192,
@@ -50,18 +56,18 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
 
     const prompt = `You are a mind map generation expert. Based on the following text, generate a comprehensive mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
 
-IMPORTANT: Each node must contain DETAILED, INFORMATIVE content - not just headings or topic titles. Provide substantive explanations, definitions, examples, and insights.
+IMPORTANT: Each node must contain CONCISE, CLEAR content that conveys the main point effectively. Use 1-2 focused sentences that capture the essential information without being verbose.
 
 Each node must have an 'id' (string), 'type: "custom"', 'position' ({x: number, y: number}), and 'data' object. The 'data' object must have:
-- 'label' (string): A DETAILED explanation or description (2-4 sentences), NOT just a heading
+- 'label' (string): A clear, concise explanation (1-2 sentences maximum), NOT just a heading
 - 'type' (string): One of 'topic', 'definition', 'explanation', 'critical-point', 'example'
 
 Guidelines for node content:
-- 'topic' nodes: Provide a comprehensive overview with context and significance
-- 'definition' nodes: Include full definitions with examples and context
-- 'explanation' nodes: Offer detailed explanations of processes, concepts, or relationships
-- 'critical-point' nodes: Highlight key insights, implications, or important facts
-- 'example' nodes: Provide specific, detailed examples with explanations
+- 'topic' nodes: Provide a brief overview with key context in 1-2 sentences
+- 'definition' nodes: Include clear definitions with essential context in 1-2 sentences
+- 'explanation' nodes: Offer focused explanations of key concepts in 1-2 sentences
+- 'critical-point' nodes: Highlight important insights or facts in 1-2 sentences
+- 'example' nodes: Provide specific, relevant examples in 1-2 sentences
 
 The root node should be of type 'topic' and positioned at { x: 0, y: 0 }.
 Position other nodes in a hierarchical layout around the root node with adequate spacing (200-300 pixels between nodes).

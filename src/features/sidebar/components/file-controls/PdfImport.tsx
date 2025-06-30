@@ -52,7 +52,7 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
     setLoadingType('pdf');
     const promise = async () => {
       try {
-        console.log("Starting PDF processing...");
+        console.log(`Starting PDF processing for ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)...`);
         const arrayBuffer = await file.arrayBuffer();
         
         // Create a more robust PDF loading configuration
@@ -88,7 +88,7 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
           }
         }
 
-        console.log(`Extracted text length: ${textContent.length} characters`);
+        console.log(`Extracted text length: ${textContent.length.toLocaleString()} characters`);
 
         if (!textContent.trim()) {
             throw new Error("Could not extract text from PDF. The document might be empty, image-based, or protected.");
@@ -96,6 +96,11 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
 
         if (textContent.length < 100) {
             throw new Error("PDF contains very little text content. Please ensure the PDF has readable text.");
+        }
+
+        // Show specific message for very large texts
+        if (textContent.length > 400000) {
+            console.log("Processing large PDF text content...");
         }
         
         console.log("Sending text to AI for mind map generation...");
@@ -106,6 +111,10 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
       } catch(error) {
         console.error("PDF processing error:", error);
         if (error instanceof Error) {
+            // Provide more specific error messages
+            if (error.message.includes('Input text is too long')) {
+                throw new Error(`PDF is too large to process (${(file.size / 1024 / 1024).toFixed(2)}MB). Try a smaller PDF or break it into sections.`);
+            }
             throw new Error(error.message || 'An error occurred during PDF processing.');
         }
         throw new Error('An unknown error occurred during PDF processing.');
@@ -113,7 +122,7 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
     };
 
     toast.promise(promise(), {
-      loading: 'Extracting text from PDF and generating mind map... This may take a moment.',
+      loading: `Processing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB) and generating mind map... This may take a moment.`,
       success: 'Mind map generated successfully from PDF!',
       error: (err) => err.message,
       finally: () => {
