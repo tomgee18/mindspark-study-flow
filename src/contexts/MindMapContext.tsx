@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -17,13 +18,12 @@ import {
   addEdge,
   XYPosition,
 } from '@xyflow/react';
-import { CustomNodeData } from '@/features/mind-map/components/CustomNode'; // Adjusted path
+import { CustomNodeData } from '@/features/mind-map/components/CustomNode';
 import {
   initialNodes as initialNodesData,
   initialEdges as initialEdgesData
-} from '@/features/mind-map/config/initial-elements'; // Adjusted path
+} from '@/features/mind-map/config/initial-elements';
 
-// 1. Define the shape of the context value
 export interface MindMapContextType {
   nodes: Node<CustomNodeData>[];
   edges: Edge[];
@@ -35,15 +35,10 @@ export interface MindMapContextType {
   setNodes: (updater: Node<CustomNodeData>[] | ((currentNodes: Node<CustomNodeData>[]) => Node<CustomNodeData>[])) => void;
   setEdges: (updater: Edge[] | ((currentEdges: Edge[]) => Edge[])) => void;
   toggleNodeCollapse: (nodeId: string) => void;
-  // We can add more specific updater functions later if needed, e.g.:
-  // addNode: (newNodeData: CustomNodeData, position: XYPosition) => void;
-  // addEdge: (newEdge: Edge) => void;
 }
 
-// 2. Create the context
 export const MindMapContext = createContext<MindMapContextType | undefined>(undefined);
 
-// 3. Create a hook for consuming the context
 export const useMindMap = (): MindMapContextType => {
   const context = useContext(MindMapContext);
   if (context === undefined) {
@@ -52,13 +47,12 @@ export const useMindMap = (): MindMapContextType => {
   return context;
 };
 
-// 4. Implement MindMapProvider
 interface MindMapProviderProps {
   children: ReactNode;
 }
 
 export const MindMapProvider = ({ children }: MindMapProviderProps) => {
-  const [nodes, setNodesState, onNodesChange] = useNodesState<CustomNodeData>(initialNodesData);
+  const [nodes, setNodesState, onNodesChange] = useNodesState(initialNodesData);
   const [edges, setEdgesState, onEdgesChange] = useEdgesState(initialEdgesData);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
@@ -67,8 +61,6 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
       const newEdge = {
         ...params,
         label: '', // Default empty label
-        // React Flow will generate a unique ID if not provided
-        // id: `e${params.source}-${params.target || params.targetHandle}`
       };
       setEdgesState((eds) => addEdge(newEdge, eds));
     },
@@ -78,19 +70,16 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
   const toggleNodeCollapse = useCallback(
     (nodeId: string) => {
       setNodesState((currentNodes) =>
-        currentNodes.map((n) =>
-          n.id === nodeId
-            ? { ...n, data: { ...n.data, isCollapsed: !(n.data.isCollapsed ?? false) } }
-            : n
+        currentNodes.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, isCollapsed: !(node.data.isCollapsed ?? false) } }
+            : node
         )
       );
     },
     [setNodesState]
   );
 
-  // Direct setNodes and setEdges for more complex updates from outside (e.g., AI generation)
-  // The types for setNodesState and setEdgesState from useNodesState/useEdgesState are compatible
-  // with what we defined in MindMapContextType.
   const setNodes = useCallback(
     (updater: Node<CustomNodeData>[] | ((currentNodes: Node<CustomNodeData>[]) => Node<CustomNodeData>[])) => {
         setNodesState(updater);
@@ -103,7 +92,6 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
     }, [setEdgesState]
   );
 
-
   const contextValue = useMemo(
     () => ({
       nodes,
@@ -113,8 +101,8 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
       onConnect,
       selectedNodeId,
       setSelectedNodeId,
-      setNodes, // Provide the wrapped setter
-      setEdges, // Provide the wrapped setter
+      setNodes,
+      setEdges,
       toggleNodeCollapse,
     }),
     [
@@ -124,7 +112,7 @@ export const MindMapProvider = ({ children }: MindMapProviderProps) => {
       onEdgesChange,
       onConnect,
       selectedNodeId,
-      setSelectedNodeId, // Added setSelectedNodeId to dependency array for completeness
+      setSelectedNodeId,
       setNodes,
       setEdges,
       toggleNodeCollapse,

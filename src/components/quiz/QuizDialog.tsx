@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,17 +11,16 @@ import {
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area'; // For potentially long quizzes
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // For displaying results
 import { CheckCircle, XCircle, HelpCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { QuizQuestion } from '@/features/ai/aiService';
+import { QuizQuestion } from '@/features/ai/aiService'; // Assuming QuizQuestion is exported from ai.ts
 
 interface QuizDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quizQuestions: QuizQuestion[];
-  mindMapTitle?: string;
+  mindMapTitle?: string; // Optional: to display as context for the quiz
 }
 
 type UserAnswer = string | null;
@@ -44,6 +42,7 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
 
   useEffect(() => {
     if (open) {
+      // Reset state when dialog opens
       setUserAnswers(new Array(quizQuestions.length).fill(null));
       setSubmitted(false);
       setResults(null);
@@ -52,19 +51,17 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
   }, [open, quizQuestions]);
 
   const handleAnswerChange = (questionIndex: number, answer: string) => {
-    if (submitted) return;
+    if (submitted) return; // Don't allow changes after submission
     const newAnswers = [...userAnswers];
     newAnswers[questionIndex] = answer;
     setUserAnswers(newAnswers);
   };
 
-  // Import useMemo at the top of the file
-  // import React, { useState, useEffect, useMemo } from 'react';
-
   const handleSubmit = () => {
-    if (unansweredCount > 0) {
-        toast.error(`Please answer all questions before submitting. ${unansweredCount} question${unansweredCount > 1 ? 's' : ''} remaining.`);
-        return;
+    if (userAnswers.some(answer => answer === null)) {
+        // Or use a toast notification
+      alert("Please answer all questions before submitting.");
+      return;
     }
 
     let currentScore = 0;
@@ -87,16 +84,11 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
     setResults(detailedResults);
     setScore(currentScore);
     setSubmitted(true);
-    
-    // Show completion toast
-    toast.success(`Quiz completed! You scored ${currentScore} out of ${quizQuestions.length}.`);
   };
 
   const getOptionLabel = (questionIndex: number, optionIndex: number, optionText: string) => {
     return `q${questionIndex}-option${optionIndex}-${optionText.replace(/\s+/g, '-')}`;
   }
-
-  const unansweredCount = useMemo(() => userAnswers.filter(answer => answer === null).length, [userAnswers]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,30 +97,29 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
           <DialogTitle>{mindMapTitle} - Quiz</DialogTitle>
           {submitted && results ? (
             <DialogDescription>
-              You scored {score} out of {quizQuestions.length} correct! Review your answers below.
+              You scored {score} out of {quizQuestions.length}. Review your answers below.
             </DialogDescription>
           ) : (
             <DialogDescription>
-              Answer the questions below to test your knowledge. {unansweredCount > 0 && `(${unansweredCount} questions remaining)`}
+              Answer the questions below to test your knowledge.
             </DialogDescription>
           )}
         </DialogHeader>
 
-
         <ScrollArea className="max-h-[60vh] p-4">
           <div className="space-y-6">
             {quizQuestions.map((q, index) => (
-              <div key={index} className={`p-4 rounded-lg border transition-colors ${
+              <div key={index} className={`p-4 rounded-lg border ${
                 submitted && results && results[index] ? (results[index].isCorrect ? 'border-green-500 bg-green-50 dark:bg-green-900/30' : 'border-red-500 bg-red-50 dark:bg-red-900/30') : 'border-border'
               }`}>
-                <p className="font-semibold mb-3">{index + 1}. {q.question}</p>
+                <p className="font-semibold mb-2">{index + 1}. {q.question}</p>
                 <RadioGroup
                   value={userAnswers[index] ?? undefined}
                   onValueChange={(value) => handleAnswerChange(index, value)}
                   disabled={submitted}
                 >
                   {(q.type === 'multiple-choice' ? q.options : ['True', 'False'])?.map((option, optIndex) => (
-                    <div key={optIndex} className="flex items-center space-x-3 mb-2">
+                    <div key={optIndex} className="flex items-center space-x-2 mb-1">
                       <RadioGroupItem
                         value={option}
                         id={getOptionLabel(index, optIndex, option)}
@@ -136,7 +127,7 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
                       />
                       <Label
                         htmlFor={getOptionLabel(index, optIndex, option)}
-                        className={`flex items-center cursor-pointer ${
+                        className={`flex items-center ${
                             submitted && results && results[index] ?
                             (results[index].correctAnswer === option ? 'text-green-700 dark:text-green-400 font-bold' : (results[index].selectedAnswer === option && !results[index].isCorrect ? 'text-red-700 dark:text-red-400 font-bold' : 'text-foreground'))
                             : 'text-foreground'
@@ -165,9 +156,7 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
 
         <DialogFooter className="mt-6">
           {!submitted ? (
-            <Button onClick={handleSubmit} disabled={unansweredCount > 0}>
-              Submit Answers {unansweredCount > 0 && `(${unansweredCount} remaining)`}
-            </Button>
+            <Button onClick={handleSubmit} disabled={userAnswers.some(a => a === null)}>Submit Answers</Button>
           ) : (
             <DialogClose asChild>
               <Button type="button" variant="outline">Close</Button>

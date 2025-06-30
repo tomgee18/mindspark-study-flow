@@ -7,15 +7,16 @@ import {
   generateMindMapFromText,
   generateExpansionForNode,
   generateQuizFromMindMap,
-  QuizQuestion,
-  generateSummaryFromNodes
-} from "@/features/ai/aiService";
+  generateSummaryFromNodes,
+  QuizQuestion
+} from "@/features/ai/aiService"; // Updated path
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, Sparkles, Settings, Loader2, HelpCircle, BookText, FilePlus2 } from "lucide-react"; // Added FilePlus2
-import { FileControls } from "./FileControls";
-import { AiSettingsDialog } from "./AiSettingsDialog";
-import { QuizDialog } from "@/features/quiz/components/QuizDialog";
-import { InfoDialog } from "@/features/common/components/InfoDialog"; // Added InfoDialog
+import { Bot, Sparkles, Settings, Loader2, HelpCircle, BookText, FilePlus2 } from "lucide-react";
+import { FileControls } from "./FileControls"; // Stays relative
+import { AiSettingsDialog } from "./AiSettingsDialog"; // Stays relative
+import { QuizDialog } from "@/features/quiz/components/QuizDialog"; // Updated path
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { decryptApiKey } from "@/lib/utils";
 import { initialNodes as defaultInitialNodes, initialEdges as defaultInitialEdges } from "@/features/mind-map/config/initial-elements"; // Updated path
 import { useMindMap } from "@/contexts/MindMapContext";
@@ -37,25 +38,18 @@ export function AppSidebar() {
   const [isGeneratingTopic, setIsGeneratingTopic] = useState(false);
   const [isExpandingNode, setIsExpandingNode] = useState(false);
   const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false); // New loading state
-  const isAnyAiGenerating = isGeneratingTopic || isExpandingNode || isCreatingQuiz || isGeneratingSummary; // Updated
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const isAnyAiGenerating = isGeneratingTopic || isExpandingNode || isCreatingQuiz || isGeneratingSummary;
 
-  const { fitView } = useReactFlow();
+  const { fitView } = useReactFlow(); // For fitView functionality
 
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [mindMapTitleForQuiz, setMindMapTitleForQuiz] = useState<string | undefined>(undefined);
-
+  
   const [summaryContent, setSummaryContent] = useState("");
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [summaryDialogTitle, setSummaryDialogTitle] = useState("Summary");
-
-  const handleNewMindMap = useCallback(() => {
-    setContextNodes(defaultInitialNodes);
-    setContextEdges(defaultInitialEdges);
-    toast.info("New mind map created.");
-    setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
-  }, [setContextNodes, setContextEdges, fitView]); // defaultInitialNodes/Edges are module constants
 
   useEffect(() => {
     const checkApiKeyStatus = async () => {
@@ -67,26 +61,44 @@ export function AppSidebar() {
     return () => window.removeEventListener('apiKeySet', checkApiKeyStatus as EventListener);
   }, []);
 
+  const handleAiOperation = async (
+    operation: () => Promise<void>,
+    loadingMessage: string,
+    successMessage: string,
+    errorMessage: string,
+    setLoadingState: (state: boolean) => void
+  ) => {
+    setLoadingState(true);
+    toast.loading(loadingMessage, { id: loadingMessage });
+    try {
+      await operation();
+      toast.success(successMessage, { id: loadingMessage });
+      setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
+    } catch (error: any) {
+      console.error(errorMessage, error);
+      toast.error(error.message || errorMessage, { id: loadingMessage });
+    } finally {
+      setLoadingState(false);
+    }
+  };
+
   const handleGenerateFromTopic = useCallback(async () => {
     const topic = window.prompt("Enter the topic for your mind map:");
     if (!topic || topic.trim() === "") {
       toast.info("Mind map generation cancelled or topic is empty.");
       return;
     }
-    setIsGeneratingTopic(true);
-    toast.loading("Generating your mind map...", { id: "generating-topic" });
-    try {
-      const { nodes: newNodesFromAI, edges: newEdgesFromAI } = await generateMindMapFromText(topic);
-      setContextNodes(newNodesFromAI);
-      setContextEdges(newEdgesFromAI);
-      toast.success("Mind map generated successfully!", { id: "generating-topic" });
-      setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
-    } catch (error: any) {
-      console.error("Error generating mind map from topic:", error);
-      toast.error(error.message || "Failed to generate mind map.", { id: "generating-topic" });
-    } finally {
-      setIsGeneratingTopic(false);
-    }
+    await handleAiOperation(
+      async () => {
+        const { nodes: newNodesFromAI, edges: newEdgesFromAI } = await generateMindMapFromText(topic);
+        setContextNodes(newNodesFromAI);
+        setContextEdges(newEdgesFromAI);
+      },
+      "Generating your mind map...",
+      "Mind map generated successfully!",
+      "Error generating mind map from topic:",
+      setIsGeneratingTopic
+    );
   }, [setContextNodes, setContextEdges, fitView]);
 
   const handleExpandNode = useCallback(async () => {
@@ -99,14 +111,17 @@ export function AppSidebar() {
       toast.error("Selected node not found.");
       return;
     }
-    setIsExpandingNode(true);
-    toast.loading("Expanding node...", { id: "expanding-node" });
-    try {
-      const { newNodes: newNodesFromAI, newEdges: newEdgesFromAI } = await generateExpansionForNode(parentNode);
-      setContextNodes((prevNodes) => [...prevNodes, ...newNodesFromAI]);
-      setContextEdges((prevEdges) => [...prevEdges, ...newEdgesFromAI]);
-      toast.success("Node expanded successfully!", { id: "expanding-node" });
-      setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
+    await handleAiOperation(
+      async () => {
+        const { newNodes: newNodesFromAI, newEdges: newEdgesFromAI } = await generateExpansionForNode(parentNode);
+        setContextNodes((prevNodes) => [...prevNodes, ...newNodesFromAI]);
+        setContextEdges((prevEdges) => [...prevEdges, ...newEdgesFromAI]);
+      },
+      "Expanding node...",
+      "Node expanded successfully!",
+      "Error expanding node:",
+      setIsExpandingNode
+    );
     } catch (error: any) {
       console.error("Error expanding node:", error);
       toast.error(error.message || "Failed to expand node.", { id: "expanding-node" });
@@ -178,20 +193,27 @@ export function AppSidebar() {
     } finally {
       setIsGeneratingSummary(false);
     }
-  }, [selectedNodeId, currentNodesFromContext, setSummaryContent, setSummaryDialogTitle, setIsSummaryDialogOpen]); // Added setters to dep array
+  }, [selectedNodeId, currentNodesFromContext]);
 
+  const handleNewMindMap = useCallback(() => {
+    setContextNodes(defaultInitialNodes);
+    setContextEdges(defaultInitialEdges);
+    toast.info("New mind map created.");
+    setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
+  }, [setContextNodes, setContextEdges, fitView]);
 
   return (
     <>
-      <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6 overflow-y-auto">
-        <FileControls hasApiKey={hasApiKey} />
-        {/* Removed onNewMindMap prop */}
-
+      <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6">
+        <FileControls
+          hasApiKey={hasApiKey}
+        />
+        
         {/* Card for New Mind Map action */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <FilePlus2 className="h-5 w-5" /> {/* Or another suitable icon for general controls */}
+              <FilePlus2 className="h-5 w-5" />
               Actions
             </CardTitle>
           </CardHeader>
@@ -200,14 +222,13 @@ export function AppSidebar() {
               variant="outline"
               className="w-full"
               onClick={handleNewMindMap}
-              disabled={isAnyAiGenerating} // Disable if any AI op is in progress
+              disabled={isAnyAiGenerating}
             >
               <FilePlus2 className="mr-2 h-4 w-4" />
               New Mind Map
             </Button>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -265,12 +286,27 @@ export function AppSidebar() {
         quizQuestions={quizQuestions}
         mindMapTitle={mindMapTitleForQuiz}
       />
-      <InfoDialog
-        open={isSummaryDialogOpen}
-        onOpenChange={setIsSummaryDialogOpen}
-        title={summaryDialogTitle}
-        content={summaryContent}
-      />
+      
+      {/* InfoDialog for Summary */}
+      <Dialog open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen}>
+        <DialogContent className="sm:max-w-md md:max-w-lg lg:max-w-xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{summaryDialogTitle}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-grow my-4 pr-6">
+            <div style={{ whiteSpace: 'pre-line' }}>
+              {summaryContent}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="mt-auto">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

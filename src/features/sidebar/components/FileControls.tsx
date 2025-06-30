@@ -11,7 +11,7 @@ import { TextImport } from './file-controls/TextImport';
 
 type LoadingType = null | 'pdf' | 'text';
 
-export function FileControls({ hasApiKey }: { hasApiKey: boolean }) {
+export function FileControls({ hasApiKey, onNewMindMap }: { hasApiKey: boolean; onNewMindMap?: () => void }) {
   const { getNodes, getEdges } = useReactFlow();
   const [loadingType, setLoadingType] = useState<LoadingType>(null);
 

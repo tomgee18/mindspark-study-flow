@@ -1,13 +1,13 @@
-
 import { useRef, Dispatch, SetStateAction } from 'react';
-import { useReactFlow } from '@xyflow/react';
+import { useMindMap } from '@/contexts/MindMapContext';
 import { Button } from '@/components/ui/button';
 import { FileText, Loader2, FileCode } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateMindMapFromText } from '@/features/ai/aiService'; // Corrected import path
-import { sanitizeText } from '@/lib/utils'; // Import sanitizeText
+import { generateMindMapFromText } from '@/features/ai/aiService';
+import { sanitizeText } from '@/lib/utils';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // Increased to 50 MB
+
 
 type LoadingType = null | 'pdf' | 'text';
 
@@ -18,7 +18,7 @@ interface TextImportProps {
 }
 
 export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImportProps) {
-  const { setNodes, setEdges } = useReactFlow();
+  const { setNodes, setEdges } = useMindMap();
   const txtFileInputRef = useRef<HTMLInputElement>(null);
   const mdFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,15 +33,20 @@ export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImpor
   const onTextFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    // Import the sanitize-filename package for safe filename handling
+    // import sanitizeFilename from 'sanitize-filename';
 
-    if (file.type !== 'text/plain' && file.type !== 'text/markdown') {
+    const isTextFile = file.type === 'text/plain' || file.name.endsWith('.txt');
+    const isMarkdownFile = file.type === 'text/markdown' || file.name.endsWith('.md') || file.name.endsWith('.markdown');
+
+    if (!isTextFile && !isMarkdownFile) {
         toast.error("Invalid file type. Please upload a .txt or .md file.");
         if (event.target) event.target.value = '';
         return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      toast.error("File is too large (max 10MB).");
+      toast.error("File is too large (max 50MB).");
       if (event.target) event.target.value = '';
       return;
     }
@@ -49,34 +54,52 @@ export function TextImport({ hasApiKey, loadingType, setLoadingType }: TextImpor
     setLoadingType('text');
     const promise = async () => {
       try {
+        const sanitizedFileName = sanitizeFilename(file.name);
+        console.log(`Processing ${sanitizedFileName}...`);
         const textContent = await file.text();
-        console.log(`Raw text from ${file.name} (length):`, textContent.length);
-        console.log(`First 500 chars of raw text from ${file.name}:`, textContent.substring(0, 500));
+<<<<<<< HEAD
+        console.log(`Raw text from ${sanitizedFileName} (length):`, textContent.length);
+        console.log(`First 500 chars of raw text from ${sanitizedFileName}:`, textContent.substring(0, 500));
         const sanitizedTextForAI = sanitizeText(textContent);
-        console.log(`Sanitized text for AI (from ${file.name}, length):`, sanitizedTextForAI.length);
-        console.log(`First 500 chars of sanitized text from ${file.name} for AI:`, sanitizedTextForAI.substring(0, 500));
+        console.log(`Sanitized text for AI (from ${sanitizedFileName}, length):`, sanitizedTextForAI.length);
+        console.log(`First 500 chars of sanitized text from ${sanitizedFileName} for AI:`, sanitizedTextForAI.substring(0, 500));
 
         if (!sanitizedTextForAI.trim()) { // Check sanitized text
-            throw new Error(`Could not extract usable text from ${file.name}. The file might be empty or its content was removed by sanitization.`);
+            throw new Error(`Could not extract usable text from ${sanitizedFileName}. The file might be empty or its content was removed by sanitization.`);
         }
         
         // Ensure generateMindMapFromText is called with sanitizedTextForAI
         const mindMap = await generateMindMapFromText(sanitizedTextForAI);
+=======
+        console.log(`File content length: ${textContent.length} characters`);
+        
+        if (!textContent.trim()) {
+            throw new Error(`Could not extract text from ${sanitizedFileName}. The file appears to be empty.`);
+        }
+
+
+        if (textContent.length < 10) {
+            throw new Error(`${file.name} contains very little content. Please ensure the file has meaningful text.`);
+        }
+        
+        console.log("Sending text to AI for mind map generation...");
+        const mindMap = await generateMindMapFromText(textContent);
+>>>>>>> main
 
         setNodes(mindMap.nodes);
         setEdges(mindMap.edges);
       } catch(error) {
-        console.error(error);
+        console.error(`Text file processing error:`, error);
         if (error instanceof Error) {
-            throw new Error(error.message || `An unknown error occurred during ${file.name} processing.`);
+            throw new Error(error.message || `An error occurred while processing ${file.name}.`);
         }
-        throw new Error(`An unknown error occurred during ${file.name} processing.`);
+        throw new Error(`An unknown error occurred while processing ${file.name}.`);
       }
     };
 
     toast.promise(promise(), {
-      loading: `Generating mind map from ${file.name}... This may take a moment.`,
-      success: 'Mind map generated successfully!',
+      loading: `Analyzing ${file.name} and generating mind map... This may take a moment.`,
+      success: 'Mind map generated successfully from text file!',
       error: (err) => err.message,
       finally: () => {
         setLoadingType(null);

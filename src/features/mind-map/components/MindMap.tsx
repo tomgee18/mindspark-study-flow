@@ -1,13 +1,11 @@
 
-import { useCallback, useEffect, useMemo, memo } from 'react'; // Import memo
+import { useCallback, useMemo, memo } from 'react';
 import {
   ReactFlow,
   addEdge,
   MiniMap,
   Controls,
   Background,
-  useNodesState,
-  useEdgesState,
   Connection,
   Edge,
   BackgroundVariant,
@@ -16,62 +14,34 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { initialNodes as initialNodesData, initialEdges as initialEdgesData } from './initial-elements';
-import CustomNode, { CustomNodeData } from './CustomNode';
+import CustomNode from './CustomNode';
+import { useMindMap } from '@/contexts/MindMapContext';
 
-// Renamed for clarity: this function now only returns descendant node IDs.
 const getDescendantNodeIds = (
-  nodeId: string, // The ID of the node that was collapsed
-  allEdges: FlowEdge[] // All edges in the graph, to find paths
+  nodeId: string,
+  adjacencyList: Map<string, string[]>
 ): Set<string> => {
   const descendantIds = new Set<string>();
-  const queue: string[] = [nodeId]; // Start BFS from the collapsed node
-  const visitedInThisCall = new Set<string>([nodeId]); // Track visited nodes for this specific call
+  const queue: string[] = [nodeId];
+  const visitedInThisCall = new Set<string>([nodeId]);
 
   let head = 0;
   while (head < queue.length) {
     const currentParentId = queue[head++];
-    for (const edge of allEdges) {
-      if (edge.source === currentParentId) {
-        const targetNodeId = edge.target;
-        if (!visitedInThisCall.has(targetNodeId)) {
-          descendantIds.add(targetNodeId);
-          visitedInThisCall.add(targetNodeId);
-          queue.push(targetNodeId);
-        }
+    const children = adjacencyList.get(currentParentId) || [];
+    for (const targetNodeId of children) {
+      if (!visitedInThisCall.has(targetNodeId)) {
+        descendantIds.add(targetNodeId);
+        visitedInThisCall.add(targetNodeId);
+        queue.push(targetNodeId);
       }
     }
   }
   return descendantIds;
 };
 
-const nodeTypes = { custom: memo(CustomNode) };
-
-import {
-  ReactFlow,
-  addEdge,
-  MiniMap,
-  Controls,
-  Background,
-  // useNodesState, // Removed
-  // useEdgesState, // Removed
-  Connection,
-  Edge,
-  BackgroundVariant,
-  Node,
-  Edge as FlowEdge,
-  // OnNodesChange and OnEdgesChange types are implicitly handled by useNodesState/useEdgesState if used locally,
-  // but will be explicitly used from context.
-} from '@xyflow/react';
-import { useMindMap } from '@/contexts/MindMapContext'; // Import the context hook
-
-// ... (keep getDescendantNodeIds and CustomNode imports)
-// initialNodesData and initialEdgesData are not used here as context provides initial state.
-import CustomNode from './CustomNode'; // CustomNodeData is imported by MindMapContext
 
 const nodeTypes = { custom: memo(CustomNode) };
-
-// No more MindMapProps needed as everything comes from context
 
 const MindMap = () => {
   const {
@@ -82,23 +52,7 @@ const MindMap = () => {
     onConnect,
     setSelectedNodeId,
     toggleNodeCollapse,
-    setEdges, // Ensure setEdges is obtained from context
   } = useMindMap();
-
-  const handleEdgeDoubleClick = useCallback(
-    (_event: React.MouseEvent, edge: Edge) => {
-      const newLabel = window.prompt('Enter new label for the edge:', edge.label || '');
-      if (newLabel !== null) { // User didn't cancel the prompt
-        setEdges((eds) =>
-          eds.map((e) => (e.id === edge.id ? { ...e, label: newLabel } : e))
-        );
-      }
-    },
-    [setEdges]
-  );
-
-  // onNodeClick is removed as onSelectionChange will handle selection updates.
-  // If other onNodeClick specific logic was needed, it could be kept.
 
   const handleSelectionChange = useCallback(
     ({ nodes: selectedNodes }: { nodes: Node[] }) => {
@@ -111,7 +65,7 @@ const MindMap = () => {
     [setSelectedNodeId]
   );
 
-  const { filteredNodes, filteredEdges } = useMemo(() => {
+  const filterNodesAndEdges = useCallback((nodes: Node[], edges: Edge[]) => {
     const processedNodes = nodes.map(node => ({
       ...node,
       data: {
@@ -124,15 +78,21 @@ const MindMap = () => {
     const allHiddenNodeIds = new Set<string>();
     processedNodes.forEach(node => {
       if (node.data.isCollapsed) {
-        const descendantNodeIds = getDescendantNodeIds(node.id, edges); // edges from context
+        const descendantNodeIds = getDescendantNodeIds(node.id, edges);
         descendantNodeIds.forEach(id => allHiddenNodeIds.add(id));
       }
     });
 
-    const currentFilteredNodes = processedNodes.filter(node => !allHiddenNodeIds.has(node.id));
-    const currentFilteredEdges = edges.filter(edge => // edges from context
+    const filteredNodes = processedNodes.filter(node => !allHiddenNodeIds.has(node.id));
+    const filteredEdges = edges.filter(edge =>
         !allHiddenNodeIds.has(edge.source) &&
         !allHiddenNodeIds.has(edge.target)
+    );
+
+    return { filteredNodes, filteredEdges };
+  }, [toggleNodeCollapse]);
+
+  const { filteredNodes, filteredEdges } = useMemo(() => filterNodesAndEdges(nodes, edges), [nodes, edges, filterNodesAndEdges]);
     );
 
     return { filteredNodes: currentFilteredNodes, filteredEdges: currentFilteredEdges };
@@ -147,7 +107,6 @@ const MindMap = () => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={handleSelectionChange}
-        onEdgeDoubleClick={handleEdgeDoubleClick} // Added onEdgeDoubleClick handler
         nodesFocusable={true}
         onlyRenderVisibleElements={true}
         nodeTypes={nodeTypes}
