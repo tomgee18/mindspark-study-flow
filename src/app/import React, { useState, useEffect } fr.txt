@@ -1,0 +1,40 @@
+import React, { useState, useEffect } from 'react';
+import { decryptApiKey } from '@/lib/utils';
+import { ApiKeyPrompt } from '@/features/auth/components/ApiKeyPrompt';
+import { Loader2 } from 'lucide-react';
+
+export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const [isApiKeySet, setIsApiKeySet] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkApiKey = async () => {
+      try {
+        const key = await decryptApiKey();
+        setIsApiKeySet(!!key);
+      } catch (error) {
+        // Assuming no key if decryption fails
+        console.error('Failed to check for API key:', error);
+        setIsApiKeySet(false);
+      }
+    };
+
+    checkApiKey();
+
+    // Listen for the custom event dispatched when the key is set or removed
+    window.addEventListener('apiKeySet', checkApiKey);
+
+    return () => {
+      window.removeEventListener('apiKeySet', checkApiKey);
+    };
+  }, []);
+
+  if (isApiKeySet === null) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return isApiKeySet ? <>{children}</> : <ApiKeyPrompt />;
+};

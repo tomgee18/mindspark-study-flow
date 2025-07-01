@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useReactFlow } from "@xyflow/react"; // Node and Edge types will come from useMindMap
 import { Button } from "@/components/ui/button";
@@ -11,15 +10,34 @@ import {
   QuizQuestion
 } from "@/features/ai/aiService"; // Updated path
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, Sparkles, Settings, Loader2, HelpCircle, BookText, FilePlus2 } from "lucide-react";
-import { FileControls } from "./FileControls"; // Stays relative
-import { AiSettingsDialog } from "./AiSettingsDialog"; // Stays relative
-import { QuizDialog } from "@/features/quiz/components/QuizDialog"; // Updated path
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Bot,
+  Sparkles,
+  Settings,
+  Loader2,
+  HelpCircle,
+  BookText,
+  FilePlus2,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react"; // Remove and re-add Lucide icon imports to fix duplicate identifier errors
+import { FileControls } from "./FileControls";
+import { AiSettingsDialog } from "./AiSettingsDialog";
+import { cn } from "@/lib/utils"; // Import cn utility
+import { QuizDialog } from "@/features/quiz/components/QuizDialog";
+import { InfoDialog } from "@/features/common/components/InfoDialog"; // Added InfoDialog
 import { decryptApiKey } from "@/lib/utils";
 import { initialNodes as defaultInitialNodes, initialEdges as defaultInitialEdges } from "@/features/mind-map/config/initial-elements"; // Updated path
 import { useMindMap } from "@/contexts/MindMapContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Props are removed, AppSidebar now uses useMindMap context
 export function AppSidebar() {
@@ -33,20 +51,16 @@ export function AppSidebar() {
 
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
-
-  // Unified loading state for all AI operations
   const [isGeneratingTopic, setIsGeneratingTopic] = useState(false);
   const [isExpandingNode, setIsExpandingNode] = useState(false);
   const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const isAnyAiGenerating = isGeneratingTopic || isExpandingNode || isCreatingQuiz || isGeneratingSummary;
-
-  const { fitView } = useReactFlow(); // For fitView functionality
-
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { fitView } = useReactFlow();
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [mindMapTitleForQuiz, setMindMapTitleForQuiz] = useState<string | undefined>(undefined);
-  
   const [summaryContent, setSummaryContent] = useState("");
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [summaryDialogTitle, setSummaryDialogTitle] = useState("Summary");
@@ -106,29 +120,23 @@ export function AppSidebar() {
       toast.error("No node selected to expand.");
       return;
     }
-    const parentNode = currentNodesFromContext.find(n => n.id === selectedNodeId);
-    if (!parentNode) {
-      toast.error("Selected node not found.");
-      return;
-    }
     await handleAiOperation(
       async () => {
-        const { newNodes: newNodesFromAI, newEdges: newEdgesFromAI } = await generateExpansionForNode(parentNode);
-        setContextNodes((prevNodes) => [...prevNodes, ...newNodesFromAI]);
-        setContextEdges((prevEdges) => [...prevEdges, ...newEdgesFromAI]);
+        const selectedNode = currentNodesFromContext.find(n => n.id === selectedNodeId);
+        if (!selectedNode) {
+          toast.error("Selected node not found.");
+          return;
+        }
+        const { newNodes: updatedNodes, newEdges: updatedEdges } = await generateExpansionForNode(selectedNode);
+        setContextNodes(updatedNodes);
+        setContextEdges(updatedEdges);
       },
       "Expanding node...",
       "Node expanded successfully!",
       "Error expanding node:",
       setIsExpandingNode
     );
-    } catch (error: any) {
-      console.error("Error expanding node:", error);
-      toast.error(error.message || "Failed to expand node.", { id: "expanding-node" });
-    } finally {
-      setIsExpandingNode(false);
-    }
-  }, [selectedNodeId, currentNodesFromContext, setContextNodes, setContextEdges, fitView]);
+  }, [selectedNodeId, setContextNodes, setContextEdges, fitView]);
 
   const handleCreateQuiz = useCallback(async () => {
     if (!currentNodesFromContext || currentNodesFromContext.length === 0) {
@@ -204,80 +212,122 @@ export function AppSidebar() {
 
   return (
     <>
-      <aside className="w-80 p-4 border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6">
-        <FileControls
-          hasApiKey={hasApiKey}
-        />
-        
-        {/* Card for New Mind Map action */}
+      <aside
+        className={cn(
+          "border-r bg-background/80 backdrop-blur-sm flex flex-col gap-6 overflow-y-auto transition-all duration-300 ease-in-out",
+          isSidebarCollapsed ? "w-20 p-2" : "w-80 p-4"
+        )}
+      >
+        <FileControls hasApiKey={hasApiKey} isCollapsed={isSidebarCollapsed} />
+
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FilePlus2 className="h-5 w-5" />
-              Actions
+          <CardHeader className={cn("pb-2", isSidebarCollapsed ? "p-0 pt-2 flex justify-center" : "")}>
+            <CardTitle className={cn("flex items-center gap-2 text-lg", isSidebarCollapsed ? "justify-center" : "")}>
+              <FilePlus2 className={cn("h-5 w-5", isSidebarCollapsed ? "m-0" : "")} />
+              {!isSidebarCollapsed && "Actions"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleNewMindMap}
-              disabled={isAnyAiGenerating}
-            >
-              <FilePlus2 className="mr-2 h-4 w-4" />
-              New Mind Map
-            </Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="h-5 w-5 text-accent" />
-              AI Assistant
-            </CardTitle>
-            <Button variant="ghost" size="icon" onClick={() => setIsAiSettingsOpen(true)} aria-label="AI Settings">
-                <Settings className="h-5 w-5" />
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-2">
+          {!isSidebarCollapsed && ( // Only render content if not collapsed, or style for icon only
+            <CardContent className={cn(isSidebarCollapsed ? "p-0" : "")}>
               <Button
                 variant="outline"
                 className="w-full"
+                onClick={handleNewMindMap}
+                disabled={isAnyAiGenerating}
+                title="New Mind Map"
+              >
+                <FilePlus2 className={cn("h-4 w-4", !isSidebarCollapsed && "mr-2")} />
+                {!isSidebarCollapsed && "New Mind Map"}
+              </Button>
+            </CardContent>
+          )}
+          {isSidebarCollapsed && ( // Icon-only button when collapsed
+             <CardContent className="p-0 flex justify-center mt-2">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleNewMindMap}
+                    disabled={isAnyAiGenerating}
+                    title="New Mind Map"
+                >
+                    <FilePlus2 className="h-5 w-5" />
+                </Button>
+             </CardContent>
+          )}
+        </Card>
+        <Card>
+          <CardHeader className={cn("flex flex-row items-center justify-between pb-2", isSidebarCollapsed ? "p-0 pt-2 flex-col" : "")}>
+            <CardTitle className={cn("flex items-center gap-2 text-lg", isSidebarCollapsed ? "justify-center" : "")}>
+              <Sparkles className={cn("h-5 w-5 text-accent", isSidebarCollapsed ? "m-0" : "")} />
+              {!isSidebarCollapsed && "AI Assistant"}
+            </CardTitle>
+            {!isSidebarCollapsed && (
+                <Button variant="ghost" size="icon" onClick={() => setIsAiSettingsOpen(true)} aria-label="AI Settings">
+                    <Settings className="h-5 w-5" />
+                </Button>
+            )}
+             {isSidebarCollapsed && (
+                 <Button variant="ghost" size="icon" className="mt-1" onClick={() => setIsAiSettingsOpen(true)} aria-label="AI Settings">
+                    <Settings className="h-5 w-5" />
+                </Button>
+            )}
+          </CardHeader>
+          <CardContent className={cn("space-y-2", isSidebarCollapsed ? "p-0 mt-2 flex flex-col items-center gap-2" : "")}>
+              <Button
+                variant="outline"
+                className={cn("w-full", isSidebarCollapsed ? "w-auto justify-center" : "")}
                 disabled={!hasApiKey || isAnyAiGenerating}
                 onClick={handleGenerateFromTopic}
+                title="Generate from Topic"
               >
-                {isGeneratingTopic ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : ( <Bot className="mr-2 h-4 w-4" /> )}
-                {isGeneratingTopic ? "Generating..." : "Generate from Topic"}
+                {isGeneratingTopic ? ( <Loader2 className={cn("h-4 w-4 animate-spin", !isSidebarCollapsed && "mr-2")} /> ) : ( <Bot className={cn("h-4 w-4", !isSidebarCollapsed && "mr-2")} /> )}
+                {!isSidebarCollapsed && (isGeneratingTopic ? "Generating..." : "Generate from Topic")}
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className={cn("w-full", isSidebarCollapsed ? "w-auto justify-center" : "")}
                 disabled={!hasApiKey || isAnyAiGenerating || !selectedNodeId}
                 onClick={handleExpandNode}
+                title="Expand Node"
               >
-                {isExpandingNode ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : ( <Bot className="mr-2 h-4 w-4" /> )}
-                Expand Node
+                {isExpandingNode ? ( <Loader2 className={cn("h-4 w-4 animate-spin", !isSidebarCollapsed && "mr-2")} /> ) : ( <Bot className={cn("h-4 w-4", !isSidebarCollapsed && "mr-2")} /> )}
+                {!isSidebarCollapsed && "Expand Node"}
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className={cn("w-full", isSidebarCollapsed ? "w-auto justify-center" : "")}
                 disabled={!hasApiKey || isAnyAiGenerating || !currentNodesFromContext || currentNodesFromContext.length === 0}
                 onClick={handleCreateQuiz}
+                title="Create Quiz"
               >
-                {isCreatingQuiz ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : ( <HelpCircle className="mr-2 h-4 w-4" /> )}
-                Create Quiz
+                {isCreatingQuiz ? ( <Loader2 className={cn("h-4 w-4 animate-spin", !isSidebarCollapsed && "mr-2")} /> ) : ( <HelpCircle className={cn("h-4 w-4", !isSidebarCollapsed && "mr-2")} /> )}
+                {!isSidebarCollapsed && "Create Quiz"}
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className={cn("w-full", isSidebarCollapsed ? "w-auto justify-center" : "")}
                 disabled={!hasApiKey || isAnyAiGenerating || !currentNodesFromContext || currentNodesFromContext.length === 0}
                 onClick={handleGenerateSummary}
+                title="Generate Summary"
               >
-                {isGeneratingSummary ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : ( <BookText className="mr-2 h-4 w-4" /> )}
-                {isGeneratingSummary ? "Summarizing..." : "Generate Summary"}
+                {isGeneratingSummary ? ( <Loader2 className={cn("h-4 w-4 animate-spin", !isSidebarCollapsed && "mr-2")} /> ) : ( <BookText className={cn("h-4 w-4", !isSidebarCollapsed && "mr-2")} /> )}
+                {!isSidebarCollapsed && (isGeneratingSummary ? "Summarizing..." : "Generate Summary")}
               </Button>
           </CardContent>
         </Card>
+
+        {/* Toggle Button */}
+        <div className={cn("mt-auto border-t pt-2", isSidebarCollapsed ? "px-0" : "")}>
+            <Button
+            variant="ghost"
+            className="w-full flex justify-center"
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+            {isSidebarCollapsed ? <ChevronRight className="h-6 w-6" /> : <ChevronLeft className="h-6 w-6" />}
+            </Button>
+        </div>
       </aside>
       <AiSettingsDialog open={isAiSettingsOpen} onOpenChange={setIsAiSettingsOpen} />
       <QuizDialog
@@ -294,7 +344,7 @@ export function AppSidebar() {
             <DialogTitle>{summaryDialogTitle}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="flex-grow my-4 pr-6">
-            <div style={{ whiteSpace: 'pre-line' }}>
+            <div className="pre-line">
               {summaryContent}
             </div>
           </ScrollArea>

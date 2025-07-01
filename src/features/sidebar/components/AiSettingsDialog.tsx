@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -35,7 +34,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
           setApiKey(decryptedKey);
         })
         .catch(err => {
-          console.error(sanitizeLogMessage(err.message)); // Sanitize error message before logging
+          console.error(sanitizeLogMessage(err)); // Sanitize error before logging
           toast.error("Could not load API key.");
         })
         .finally(() => {
@@ -56,7 +55,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
         window.dispatchEvent(new Event('apiKeySet')); // Notify other components
         onOpenChange(false);
     } catch (err) {
-        console.error(sanitizeLogMessage(err.message));
+        console.error(sanitizeLogMessage(err));
         toast.error('Failed to save API key.');
     } finally {
         setIsLoading(false);

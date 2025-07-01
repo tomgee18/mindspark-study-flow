@@ -1,17 +1,17 @@
-
 import { useCallback, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils'; // Import cn
 import { JsonImport } from './file-controls/JsonImport';
 import { PdfImport } from './file-controls/PdfImport';
 import { TextImport } from './file-controls/TextImport';
 
 type LoadingType = null | 'pdf' | 'text';
 
-export function FileControls({ hasApiKey, onNewMindMap }: { hasApiKey: boolean; onNewMindMap?: () => void }) {
+export function FileControls({ hasApiKey, onNewMindMap, isCollapsed }: { hasApiKey: boolean; onNewMindMap?: () => void; isCollapsed?: boolean }) {
   const { getNodes, getEdges } = useReactFlow();
   const [loadingType, setLoadingType] = useState<LoadingType>(null);
 

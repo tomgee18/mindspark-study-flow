@@ -1,0 +1,22 @@
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { AiSettingsDialog } from '@/features/sidebar/components/AiSettingsDialog';
+import { KeyRound } from 'lucide-react';
+
+export const ApiKeyPrompt = () => {
+  const [isSettingsOpen, setSettingsOpen] = useState(true);
+
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-4 text-center">
+      <div className="flex flex-col items-center gap-4">
+        <KeyRound className="h-16 w-16 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">API Key Required</h1>
+        <p className="max-w-md text-muted-foreground">
+          To unlock the AI-powered features of this application, please provide your Google AI API key. Your key is stored securely in your browser.
+        </p>
+        <Button onClick={() => setSettingsOpen(true)}>Set API Key</Button>
+      </div>
+      <AiSettingsDialog open={isSettingsOpen} onOpenChange={setSettingsOpen} />
+    </div>
+  );
+};
