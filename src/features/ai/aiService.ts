@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { Edge, Node } from '@xyflow/react';
 import { CustomNodeData } from "@/features/mind-map/components/CustomNode";
-import { sanitizeText, decryptApiKey, checkRateLimit } from "@/lib/utils";
+import { sanitizeText, decryptApiKey, checkRateLimit, getCurrentProviderAndKey } from "@/lib/utils";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
 const MAX_TEXT_LENGTH = 500000; // Increased from 100k to 500k characters
@@ -9,6 +9,42 @@ const MAX_TEXT_LENGTH = 500000; // Increased from 100k to 500k characters
 type MindMapFlow = {
     nodes: Node<CustomNodeData>[];
     edges: Edge[];
+}
+
+async function callTogetherAI(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch("https://api.together.xyz/v1/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "togethercomputer/llama-2-70b-chat", // or another supported model
+      prompt,
+      max_tokens: 2048,
+      temperature: 0.7
+    })
+  });
+  const data = await response.json();
+  return data.choices?.[0]?.text || "";
+}
+
+async function callOpenRouter(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "openrouter/gpt-3.5-turbo", // or another supported model
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2048,
+      temperature: 0.7
+    })
+  });
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
 }
 
 export async function generateMindMapFromText(text: string): Promise<MindMapFlow> {
@@ -32,29 +68,31 @@ export async function generateMindMapFromText(text: string): Promise<MindMapFlow
         throw new Error("Input text is empty after sanitization.");
     }
 
-    const apiKey = await decryptApiKey();
+    const { provider, apiKey } = getCurrentProviderAndKey();
     if (!apiKey) {
-        throw new Error("Google AI API key not found. Please set it in the AI Settings.");
+        throw new Error("API key not found. Please set it in the AI Settings.");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+    let responseText = "";
+    if (provider === "google") {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    const generationConfig = {
-        temperature: 0.8, // Reduced from 1.0 for more focused responses
-        topK: 1,
-        topP: 1,
-        maxOutputTokens: 8192,
-    };
+        const generationConfig = {
+            temperature: 0.8, // Reduced from 1.0 for more focused responses
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 8192,
+        };
 
-    const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ];
+        const safetySettings = [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        ];
 
-    const prompt = `You are a mind map generation expert. Based on the following text, generate a comprehensive mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
+        const prompt = `You are a mind map generation expert. Based on the following text, generate a comprehensive mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
 
 IMPORTANT: Each node must contain CONCISE, CLEAR content that conveys the main point effectively. Use 1-2 focused sentences that capture the essential information without being verbose.
 
@@ -81,52 +119,107 @@ ${sanitizedText}
 ---
 `;
 
-    let result;
-    try {
-        result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig,
-            safetySettings,
-        });
-    } catch (apiError: any) {
-        console.error("Google AI API error (generateMindMapFromText):", apiError);
-        throw new Error(`AI service temporarily unavailable. Please try again in a few moments.`);
+        let result;
+        try {
+            result = await model.generateContent({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig,
+                safetySettings,
+            });
+            responseText = result.response.text();
+        } catch (apiError: any) {
+            console.error("Google AI API error (generateMindMapFromText):", apiError);
+            throw new Error(`AI service temporarily unavailable. Please try again in a few moments.`);
+        }
+    } else if (provider === "together") {
+        const prompt = `You are a mind map generation expert. Based on the following text, generate a comprehensive mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
+
+IMPORTANT: Each node must contain CONCISE, CLEAR content that conveys the main point effectively. Use 1-2 focused sentences that capture the essential information without being verbose.
+
+Each node must have an 'id' (string), 'type: "custom"', 'position' ({x: number, y: number}), and 'data' object. The 'data' object must have:
+- 'label' (string): A clear, concise explanation (1-2 sentences maximum), NOT just a heading
+- 'type' (string): One of 'topic', 'definition', 'explanation', 'critical-point', 'example'
+
+Guidelines for node content:
+- 'topic' nodes: Provide a brief overview with key context in 1-2 sentences
+- 'definition' nodes: Include clear definitions with essential context in 1-2 sentences
+- 'explanation' nodes: Offer focused explanations of key concepts in 1-2 sentences
+- 'critical-point' nodes: Highlight important insights or facts in 1-2 sentences
+- 'example' nodes: Provide specific, relevant examples in 1-2 sentences
+
+The root node should be of type 'topic' and positioned at { x: 0, y: 0 }.
+Position other nodes in a hierarchical layout around the root node with adequate spacing (200-300 pixels between nodes).
+Each edge must have an 'id' (string), 'source' (source node id as a string), and 'target' (target node id as a string).
+
+Ensure the output is a valid JSON object and nothing else. Do not add any commentary or wrap it in markdown backticks.
+
+Here is the text to analyze:
+---
+${sanitizedText}
+---
+`;
+        responseText = await callTogetherAI(prompt, apiKey);
+    } else if (provider === "openrouter") {
+        const prompt = `You are a mind map generation expert. Based on the following text, generate a comprehensive mind map in JSON format for a react-flow diagram. The JSON should have 'nodes' and 'edges' properties.
+
+IMPORTANT: Each node must contain CONCISE, CLEAR content that conveys the main point effectively. Use 1-2 focused sentences that capture the essential information without being verbose.
+
+Each node must have an 'id' (string), 'type: "custom"', 'position' ({x: number, y: number}), and 'data' object. The 'data' object must have:
+- 'label' (string): A clear, concise explanation (1-2 sentences maximum), NOT just a heading
+- 'type' (string): One of 'topic', 'definition', 'explanation', 'critical-point', 'example'
+
+Guidelines for node content:
+- 'topic' nodes: Provide a brief overview with key context in 1-2 sentences
+- 'definition' nodes: Include clear definitions with essential context in 1-2 sentences
+- 'explanation' nodes: Offer focused explanations of key concepts in 1-2 sentences
+- 'critical-point' nodes: Highlight important insights or facts in 1-2 sentences
+- 'example' nodes: Provide specific, relevant examples in 1-2 sentences
+
+The root node should be of type 'topic' and positioned at { x: 0, y: 0 }.
+Position other nodes in a hierarchical layout around the root node with adequate spacing (200-300 pixels between nodes).
+Each edge must have an 'id' (string), 'source' (source node id as a string), and 'target' (target node id as a string).
+
+Ensure the output is a valid JSON object and nothing else. Do not add any commentary or wrap it in markdown backticks.
+
+Here is the text to analyze:
+---
+${sanitizedText}
+---
+`;
+        responseText = await callOpenRouter(prompt, apiKey);
+    } else {
+        throw new Error("Unknown LLM provider selected.");
     }
 
     try {
-        const responseText = result.response.text();
-        console.log("Raw AI response:", responseText); // Debug logging
-        
-        let cleanedJsonString = responseText.replace(/```json/g, '').replace(/```/g, '');
-        const jsonStartIndex = cleanedJsonString.indexOf('{');
-        const jsonEndIndex = cleanedJsonString.lastIndexOf('}');
-        
+        const jsonStartIndex = responseText.indexOf('{');
+        const jsonEndIndex = responseText.lastIndexOf('}');
+
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
-            cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1);
+            const cleanedJsonString = responseText.substring(jsonStartIndex, jsonEndIndex + 1);
+            const flow = JSON.parse(cleanedJsonString);
+
+            if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges) && flow.nodes.length > 0) {
+                // Validate node structure
+                const validatedNodes = flow.nodes.map((node: any, index: number) => ({
+                    ...node,
+                    id: node.id || `node-${index}`,
+                    type: 'custom',
+                    position: node.position || { x: index * 200, y: index * 100 },
+                    data: {
+                        label: node.data?.label || 'Untitled Node',
+                        type: node.data?.type || 'explanation',
+                    }
+                }));
+
+                return { nodes: validatedNodes, edges: flow.edges };
+            } else {
+                console.error("Invalid mind map structure:", flow);
+                throw new Error("Generated mind map structure is incomplete. Please try again.");
+            }
         } else {
             console.error("Could not extract JSON from AI response:", responseText);
             throw new Error("AI response format error. Please try again with different input.");
-        }
-
-        const flow = JSON.parse(cleanedJsonString);
-        
-        if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges) && flow.nodes.length > 0) {
-            // Validate node structure
-            const validatedNodes = flow.nodes.map((node: any, index: number) => ({
-                ...node,
-                id: node.id || `node-${index}`,
-                type: 'custom',
-                position: node.position || { x: index * 200, y: index * 100 },
-                data: {
-                    label: node.data?.label || 'Untitled Node',
-                    type: node.data?.type || 'explanation',
-                }
-            }));
-            
-            return { nodes: validatedNodes, edges: flow.edges };
-        } else {
-            console.error("Invalid mind map structure:", flow);
-            throw new Error("Generated mind map structure is incomplete. Please try again.");
         }
     } catch (e: any) {
         console.error("Failed to parse AI response:", e.message);
@@ -153,12 +246,10 @@ export async function generateQuizFromMindMap(
     if (!rateLimitResult.allowed) {
         throw new Error(`Rate limit exceeded for quiz generation. Please try again in ${rateLimitResult.retryAfter} seconds.`);
     }
-
-    const apiKey = await decryptApiKey();
+    const { provider, apiKey } = getCurrentProviderAndKey();
     if (!apiKey) {
-        throw new Error("Google AI API key not found. Please set it in the AI Settings.");
+        throw new Error("API key not found. Please set it in the AI Settings.");
     }
-
     // Simplify mind map data for the prompt
     let mindMapPromptData = "Nodes:\n";
     const nodeMap = new Map<string, Node<CustomNodeData>>();
@@ -166,7 +257,6 @@ export async function generateQuizFromMindMap(
         nodeMap.set(node.id, node);
         mindMapPromptData += `- ${node.id}: "${node.data.label}" (type: ${node.data.type})\n`;
     });
-
     mindMapPromptData += "\nConnections:\n";
     edges.forEach(edge => {
         const sourceNode = nodeMap.get(edge.source);
@@ -175,7 +265,6 @@ export async function generateQuizFromMindMap(
             mindMapPromptData += `- "${sourceNode.data.label}" -> "${targetNode.data.label}"\n`;
         }
     });
-
     if (nodes.length === 0) {
         throw new Error("Cannot generate quiz from an empty mind map.");
     }
@@ -183,23 +272,6 @@ export async function generateQuizFromMindMap(
     if (mindMapPromptData.length > MAX_TEXT_LENGTH / 2) { // Reserve half for other parts of prompt
          throw new Error("Mind map data is too large to generate a quiz. Please simplify the mind map.");
     }
-
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    const generationConfig = {
-        temperature: 0.6, // Slightly lower temperature for more factual quiz questions
-        topK: 1,
-        topP: 1,
-        maxOutputTokens: 4096,
-    };
-
-    const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        // Add other safety settings as needed
-    ];
-
     const prompt = `You are an AI expert at creating educational quizzes. Based on the provided mind map structure and content, generate a quiz with 3-5 questions.
 
 Mind Map Data:
@@ -233,47 +305,62 @@ Example of expected JSON output format:
   }
 ]
 `;
-
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig,
-        safetySettings,
-    });
-
+    let responseText = "";
+    if (provider === "google") {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const generationConfig = {
+            temperature: 0.6,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 4096,
+        };
+        const safetySettings = [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        ];
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig,
+            safetySettings,
+        });
+        responseText = result.response.text();
+    } else if (provider === "together") {
+        responseText = await callTogetherAI(prompt, apiKey);
+    } else if (provider === "openrouter") {
+        responseText = await callOpenRouter(prompt, apiKey);
+    } else {
+        throw new Error("Unknown LLM provider selected.");
+    }
     try {
-        const responseText = result.response.text();
-        let cleanedJsonString = responseText.replace(/```json/g, '').replace(/```/g, '');
-        // Expecting an array, so look for [ and ]
-        const jsonStartIndex = cleanedJsonString.indexOf('[');
-        const jsonEndIndex = cleanedJsonString.lastIndexOf(']');
+        const jsonStartIndex = responseText.indexOf('[');
+        const jsonEndIndex = responseText.lastIndexOf(']');
 
         if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
-            cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1);
-        } else {
-            console.error("Raw AI response for quiz:", responseText);
-            throw new Error("Could not find valid JSON array in AI quiz response.");
-        }
+            const cleanedJsonString = responseText.substring(jsonStartIndex, jsonEndIndex + 1);
+            const quiz = JSON.parse(cleanedJsonString) as QuizQuestion[];
 
-        const quiz = JSON.parse(cleanedJsonString) as QuizQuestion[];
-
-        if (Array.isArray(quiz)) {
-            // Basic validation of question structure
-            quiz.forEach(q => {
-                if (!q.question || !q.type || !q.correctAnswer) {
-                    throw new Error("Invalid question structure in AI response. Missing required fields.");
-                }
-                if (q.type === 'multiple-choice' && (!Array.isArray(q.options) || q.options.length < 2)) {
-                    throw new Error("Invalid multiple-choice question: options array is missing or has too few items.");
-                }
-            });
-            return quiz;
+            if (Array.isArray(quiz)) {
+                // Basic validation of question structure
+                quiz.forEach(q => {
+                    if (!q.question || !q.type || !q.correctAnswer) {
+                        throw new Error("Invalid question structure in AI response. Missing required fields.");
+                    }
+                    if (q.type === 'multiple-choice' && (!Array.isArray(q.options) || q.options.length < 2)) {
+                        throw new Error("Invalid multiple-choice question: options array is missing or has too few items.");
+                    }
+                });
+                return quiz;
+            } else {
+                console.error("Raw AI response for quiz (expected array):", responseText);
+                throw new Error('Invalid JSON structure for quiz from AI (expected an array).');
+            }
         } else {
-            console.error("Raw AI response for quiz (expected array):", responseText);
-            throw new Error('Invalid JSON structure for quiz from AI (expected an array).');
+            console.error("Could not extract JSON array from AI response:", responseText);
+            throw new Error("AI response format error. Please try again with different input.");
         }
     } catch (e: any) {
         console.error("Failed to parse AI quiz response:", e.message);
-        console.error("Raw AI response text for quiz:", result.response.text());
+        console.error("Raw AI response text for quiz:", responseText);
         throw new Error(`Failed to parse quiz from AI response: ${e.message}`);
     }
 }
@@ -286,35 +373,14 @@ export async function generateSummaryFromNodes(
     if (!rateLimitResult.allowed) {
         throw new Error(`Rate limit exceeded for summary generation. Please try again in ${rateLimitResult.retryAfter} seconds.`);
     }
-
-    const apiKey = await decryptApiKey();
+    const { provider, apiKey } = getCurrentProviderAndKey();
     if (!apiKey) {
-        throw new Error("Google AI API key not found. Please set it in the AI Settings.");
+        throw new Error("API key not found. Please set it in the AI Settings.");
     }
-
-    // Prepare node data for the prompt
     let nodeContent = "";
     nodes.forEach(node => {
         nodeContent += `- ${node.data.type.toUpperCase()}: ${node.data.label}\n`;
     });
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    const generationConfig = {
-        temperature: 0.4,
-        topK: 1,
-        topP: 1,
-        maxOutputTokens: 4096,
-    };
-
-    const safetySettings = [
-        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ];
-
     const prompt = `You are an expert at summarizing and synthesizing information. Based on the following mind map nodes, create a comprehensive summary that explains the topic and connects the key concepts.
 
 Mind Map Title: ${title}
@@ -329,19 +395,36 @@ Please provide a well-structured summary that:
 4. Concludes with the most important takeaways
 
 Format the summary with appropriate paragraphs and structure. The summary should be informative and educational.`;
-
-    try {
+    let responseText = "";
+    if (provider === "google") {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        const generationConfig = {
+            temperature: 0.4,
+            topK: 1,
+            topP: 1,
+            maxOutputTokens: 4096,
+        };
+        const safetySettings = [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        ];
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }] }],
             generationConfig,
             safetySettings,
         });
-
-        return result.response.text();
-    } catch (error: any) {
-        console.error("Error generating summary:", error);
-        throw new Error(`Failed to generate summary: ${error.message}`);
+        responseText = result.response.text();
+    } else if (provider === "together") {
+        responseText = await callTogetherAI(prompt, apiKey);
+    } else if (provider === "openrouter") {
+        responseText = await callOpenRouter(prompt, apiKey);
+    } else {
+        throw new Error("Unknown LLM provider selected.");
     }
+    return responseText;
 }
 
 export async function generateExpansionForNode(
@@ -356,7 +439,7 @@ export async function generateExpansionForNode(
 
     const apiKey = await decryptApiKey();
     if (!apiKey) {
-        throw new Error("Google AI API key not found. Please set it in the AI Settings.");
+        throw new Error("Google AI key not found. Please set it in the AI Settings.");
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);

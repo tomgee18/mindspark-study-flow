@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useReactFlow } from "@xyflow/react"; // Node and Edge types will come from useMindMap
 import { Button } from "@/components/ui/button";
@@ -272,8 +271,8 @@ export function AppSidebar() {
           <DialogHeader>
             <DialogTitle>{summaryDialogTitle}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-grow my-4 pr-6">
-            <div style={{ whiteSpace: 'pre-line' }}>
+          <ScrollArea className="flex-grow my-4 pr-6 max-h-[60vh] overflow-y-auto">
+            <div className="pre-line">
               {summaryContent}
             </div>
           </ScrollArea>

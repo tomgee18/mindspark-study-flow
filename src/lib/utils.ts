@@ -142,3 +142,9 @@ export function checkRateLimit(key: string): { allowed: boolean; retryAfter?: nu
     localStorage.setItem(recordsKey, JSON.stringify(recentTimestamps));
     return { allowed: true };
 }
+
+export function getCurrentProviderAndKey() {
+  const provider = localStorage.getItem("llmProvider") || "google";
+  const apiKey = localStorage.getItem(`apiKey_${provider}`) || "";
+  return { provider, apiKey };
+}
