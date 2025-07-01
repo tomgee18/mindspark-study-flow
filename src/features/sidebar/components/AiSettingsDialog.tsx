@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { encryptApiKey, decryptApiKey, removeApiKey } from '@/lib/utils';
-
+// Import statement for sanitization
+import { sanitizeLogMessage } from './logUtils'; // Utility function to sanitize log messages
 
 interface AiSettingsDialogProps {
   open: boolean;
@@ -34,7 +35,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
           setApiKey(decryptedKey);
         })
         .catch(err => {
-          console.error(err);
+          console.error(sanitizeLogMessage(err.message)); // Sanitize error message before logging
           toast.error("Could not load API key.");
         })
         .finally(() => {
@@ -45,6 +46,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
 
   const handleSave = async () => {
     if (!apiKey) {
+
         toast.error('API Key cannot be empty.');
         return;
     }

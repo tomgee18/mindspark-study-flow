@@ -55,21 +55,26 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
+// Import the sanitize-html package for input sanitization
+// npm install sanitize-html
+// const sanitizeHtml = require('sanitize-html');
+
 const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return
   }
 
   const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
+    toastTimeouts.delete(sanitizeHtml(toastId))
     dispatch({
       type: "REMOVE_TOAST",
-      toastId: toastId,
+      toastId: sanitizeHtml(toastId),
     })
   }, TOAST_REMOVE_DELAY)
 
-  toastTimeouts.set(toastId, timeout)
+  toastTimeouts.set(sanitizeHtml(toastId), timeout)
 }
+
 
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {

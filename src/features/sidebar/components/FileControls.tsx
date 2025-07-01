@@ -28,27 +28,34 @@ export function FileControls({ hasApiKey, onNewMindMap }: { hasApiKey: boolean; 
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(flow, null, 2)
     )}`;
+    // Use URL.createObjectURL for safer file creation
+    const blob = new Blob([JSON.stringify(flow, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = jsonString;
+    link.href = url;
     link.download = 'mindmap.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     toast.success("Mind map exported successfully!");
   }, [getNodes, getEdges]);
+
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
+        <CardTitle className={`flex items-center gap-2 text-lg`}>
           <Download className="h-5 w-5" />
           File
         </CardTitle>
+
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className={`space-y-2`}>
         <Button className="w-full" onClick={onExport}>
           <Download className="mr-2 h-4 w-4" />
           Export JSON
+
         </Button>
         <JsonImport />
         <PdfImport 

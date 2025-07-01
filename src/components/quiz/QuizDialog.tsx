@@ -59,12 +59,15 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
 
   const handleSubmit = () => {
     if (userAnswers.some(answer => answer === null)) {
-        // Or use a toast notification
-      alert("Please answer all questions before submitting.");
-      return;
+        // Use a more user-friendly notification method
+        // TODO: Implement a toast notification or in-component error message
+        console.error("Please answer all questions before submitting.");
+        return;
     }
 
     let currentScore = 0;
+
+
     const detailedResults = quizQuestions.map((q, index) => {
       const isCorrect = userAnswers[index] === q.correctAnswer;
       if (isCorrect) {
@@ -87,10 +90,11 @@ export function QuizDialog({ open, onOpenChange, quizQuestions, mindMapTitle = "
   };
 
   const getOptionLabel = (questionIndex: number, optionIndex: number, optionText: string) => {
-    return `q${questionIndex}-option${optionIndex}-${optionText.replace(/\s+/g, '-')}`;
+    return `question-${questionIndex + 1}-option-${optionIndex + 1}`;
   }
 
   return (
+
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] md:max-w-[800px] lg:max-w-[900px]">
         <DialogHeader>

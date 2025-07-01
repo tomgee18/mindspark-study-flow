@@ -12,7 +12,10 @@ export function sanitizeText(text: string): string {
 }
 
 const ENCRYPTION_KEY_NAME = 'mindspark-crypto-key';
-const ENCRYPTED_API_KEY_NAME = 'googleAiApiKey_encrypted';
+// Import the dotenv package to load environment variables
+// require('dotenv').config();
+
+const ENCRYPTED_API_KEY_NAME = process.env.GOOGLE_AI_API_KEY_ENCRYPTED;
 
 async function exportKey(key: CryptoKey): Promise<string> {
     const exported = await window.crypto.subtle.exportKey('jwk', key);
