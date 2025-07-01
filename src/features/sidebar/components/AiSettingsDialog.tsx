@@ -46,9 +46,8 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
 
   const handleSave = async () => {
     if (!apiKey) {
-
-        toast.error('API Key cannot be empty.');
-        return;
+      toast.error('API Key cannot be empty.');
+      return;
     }
     setIsLoading(true);
     try {
@@ -57,7 +56,7 @@ export function AiSettingsDialog({ open, onOpenChange }: AiSettingsDialogProps) 
         window.dispatchEvent(new Event('apiKeySet')); // Notify other components
         onOpenChange(false);
     } catch (err) {
-        console.error(err);
+        console.error(sanitizeLogMessage(err.message));
         toast.error('Failed to save API key.');
     } finally {
         setIsLoading(false);
