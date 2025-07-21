@@ -1,0 +1,111 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 20 50% 98%; /* A warm off-white, like #FCFBF9 */
+    --foreground: 20 14.3% 4.1%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 14.3% 4.1%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14.3% 4.1%;
+
+    --primary: 212 72% 58%; /* Friendly Blue #4A90E2 */
+    --primary-foreground: 355.7 100% 97.3%;
+
+    --secondary: 163 72% 60%; /* Gentle Teal/Mint #50E3C2 */
+    --secondary-foreground: 20 14.3% 4.1%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 35 92% 55%; /* Warm Orange #F5A623 */
+    --accent-foreground: 20 14.3% 4.1%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 355.7 100% 97.3%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 212 72% 58%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 20 14.3% 4.1%;
+    --foreground: 355.7 100% 97.3%;
+    --card: 20 14.3% 4.1%;
+    --card-foreground: 355.7 100% 97.3%;
+    --popover: 20 14.3% 4.1%;
+    --popover-foreground: 355.7 100% 97.3%;
+    --primary: 212 72% 58%;
+    --primary-foreground: 20 14.3% 4.1%;
+    --secondary: 163 72% 60%;
+    --secondary-foreground: 20 14.3% 4.1%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 35 92% 55%;
+    --accent-foreground: 20 14.3% 4.1%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 355.7 100% 97.3%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212 72% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Poppins', sans-serif;
+  }
+}
+
+/* React Flow custom styles */
+.react-flow__panel {
+    z-index: 5;
+}
+
+/* React Flow Dark Mode Overrides */
+.dark .react-flow__panel {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .react-flow__controls-button {
+  background-color: hsl(var(--muted));
+  border-bottom-color: hsl(var(--border));
+}
+
+.dark .react-flow__controls-button:hover {
+  background-color: hsl(var(--accent) / 0.2);
+}
+
+.dark .react-flow__controls-button svg {
+  fill: hsl(var(--muted-foreground));
+}
+
+.dark .react-flow__minimap-node {
+  fill: hsl(var(--primary));
+  stroke: none;
+}
+
+.dark .react-flow__attribution {
+  background: transparent;
+}
+
+/* This targets the background pattern dots for both themes */
+.react-flow__background.dots path {
+  fill: hsl(var(--border));
+}
+
+.pre-line {
+  white-space: pre-line;
+}
