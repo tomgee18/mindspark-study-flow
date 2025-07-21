@@ -77,9 +77,14 @@ export const AppSidebar: React.FC<IAppSidebarProps> = () => {
       setContextEdges(newEdgesFromAI);
       toast.success("Mind map generated successfully!", { id: "generating-topic" });
       setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
-    } catch (error: any) {
-      console.error("Error generating mind map from topic:", error);
-      toast.error(error.message || "Failed to generate mind map.", { id: "generating-topic" });
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error("Error generating mind map from topic:", error);
+            toast.error(error.message || "Failed to generate mind map.", { id: "generating-topic" });
+        } else {
+            console.error("An unknown error occurred:", error);
+            toast.error("An unknown error occurred.", { id: "generating-topic" });
+        }
     } finally {
       setIsGeneratingTopic(false);
     }
@@ -103,9 +108,14 @@ export const AppSidebar: React.FC<IAppSidebarProps> = () => {
       setContextEdges((prevEdges) => [...prevEdges, ...newEdgesFromAI]);
       toast.success("Node expanded successfully!", { id: "expanding-node" });
       setTimeout(() => fitView?.({ padding: 0.2, duration: 500 }), 100);
-    } catch (error: any) {
-      console.error("Error expanding node:", error);
-      toast.error(error.message || "Failed to expand node.", { id: "expanding-node" });
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error("Error expanding node:", error);
+            toast.error(error.message || "Failed to expand node.", { id: "expanding-node" });
+        } else {
+            console.error("An unknown error occurred:", error);
+            toast.error("An unknown error occurred.", { id: "expanding-node" });
+        }
     } finally {
       setIsExpandingNode(false);
     }
@@ -127,9 +137,14 @@ export const AppSidebar: React.FC<IAppSidebarProps> = () => {
       setMindMapTitleForQuiz(rootNode?.data?.label || "Mind Map Quiz");
       setIsQuizDialogOpen(true);
       toast.success("Quiz generated successfully!", { id: "generating-quiz" });
-    } catch (error: any) {
-      console.error("Error generating quiz:", error);
-      toast.error(error.message || "Failed to generate quiz.", { id: "generating-quiz" });
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error("Error generating quiz:", error);
+            toast.error(error.message || "Failed to generate quiz.", { id: "generating-quiz" });
+        } else {
+            console.error("An unknown error occurred:", error);
+            toast.error("An unknown error occurred.", { id: "generating-quiz" });
+        }
     } finally {
       setIsCreatingQuiz(false);
     }
@@ -168,9 +183,14 @@ export const AppSidebar: React.FC<IAppSidebarProps> = () => {
       setSummaryDialogTitle(titleForSummary);
       setIsSummaryDialogOpen(true);
       toast.success("Summary generated successfully!", { id: "generating-summary" });
-    } catch (error: any) {
-      console.error("Error generating summary:", error);
-      toast.error(error.message || "Failed to generate summary.", { id: "generating-summary" });
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error("Error generating summary:", error);
+            toast.error(error.message || "Failed to generate summary.", { id: "generating-summary" });
+        } else {
+            console.error("An unknown error occurred:", error);
+            toast.error("An unknown error occurred.", { id: "generating-summary" });
+        }
     } finally {
       setIsGeneratingSummary(false);
     }
