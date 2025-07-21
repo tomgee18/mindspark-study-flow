@@ -27,7 +27,7 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
-<<<<<<< HEAD
+ HEAD
       // Base ESLint rules
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
       "no-unused-vars": "off", // TypeScript handles this
@@ -79,7 +79,7 @@ export default tseslint.config(
     rules: {
       // Base ESLint rules for JS files
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
-=======
+
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
         "warn",
@@ -90,7 +90,10 @@ export default tseslint.config(
         "error",
         { "allowShortCircuit": true }
       ],
->>>>>>> 959ece095f43a6858065b72161bcb6cd60e406fe
+ fix-lint-errors
+
+ 959ece095f43a6858065b72161bcb6cd60e406fe
+ main
     },
   }
 );
