@@ -20,8 +20,11 @@ import { decryptApiKey } from "@/lib/utils";
 import { initialNodes as defaultInitialNodes, initialEdges as defaultInitialEdges } from "@/features/mind-map/config/initial-elements"; // Updated path
 import { useMindMap } from "@/contexts/MindMapContext";
 
-// Props are removed, AppSidebar now uses useMindMap context
-export function AppSidebar() {
+// Using Record<string, never> instead of empty interface to satisfy ESLint
+type IAppSidebarProps = Record<string, never>;
+
+// Component uses useMindMap context for state management
+export const AppSidebar: React.FC<IAppSidebarProps> = () => {
   const {
     nodes: currentNodesFromContext,      // Nodes from context
     edges: currentEdgesFromContext,      // Edges from context

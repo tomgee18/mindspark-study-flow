@@ -1,16 +1,20 @@
 
-import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
+import React from "react";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
-export function ModeToggle() {
+// Using Record<string, never> instead of empty interface to satisfy ESLint
+type IModeToggleProps = Record<string, never>;
+
+export const ModeToggle: React.FC<IModeToggleProps> = () => {
   const { setTheme } = useTheme()
 
   return (

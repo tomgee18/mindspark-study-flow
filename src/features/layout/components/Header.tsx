@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { BrainCircuit } from 'lucide-react';
-import { ModeToggle } from '@/features/theme/ModeToggle'; // Adjusted path
+import { ModeToggle } from '@/features/theme/ModeToggle';
 
 // Using Record<string, never> instead of empty interface to satisfy ESLint
 type IHeaderProps = Record<string, never>;

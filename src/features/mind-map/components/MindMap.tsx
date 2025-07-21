@@ -17,6 +17,13 @@ import '@xyflow/react/dist/style.css';
 import CustomNode from './CustomNode';
 import { useMindMap } from '@/contexts/MindMapContext';
 
+/**
+ * Gets all descendant node IDs for a given node
+ * 
+ * @param nodeId - The ID of the node to get descendants for
+ * @param allEdges - All edges in the graph
+ * @returns A set of descendant node IDs
+ */
 const getDescendantNodeIds = (
   nodeId: string,
   allEdges: FlowEdge[]
