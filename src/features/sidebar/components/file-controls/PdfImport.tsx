@@ -73,7 +73,7 @@ export function PdfImport({ hasApiKey, loadingType, setLoadingType }: PdfImportP
           
           // Improved text extraction with proper spacing and line breaks
           const pageText = text.items
-            .map((item: any) => {
+            .map((item: { str: string }) => {
               if (item.str && item.str.trim()) {
                 return item.str;
               }

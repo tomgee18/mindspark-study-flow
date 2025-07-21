@@ -1,10 +1,8 @@
 
 import React, {
-  createContext,
   useState,
   useCallback,
   useMemo,
-  useContext,
   ReactNode,
 } from 'react';
 import {
@@ -16,13 +14,13 @@ import {
   useNodesState,
   useEdgesState,
   addEdge,
-  XYPosition,
 } from '@xyflow/react';
 import { CustomNodeData } from '@/features/mind-map/components/CustomNode';
 import {
   initialNodes as initialNodesData,
   initialEdges as initialEdgesData
 } from '@/features/mind-map/config/initial-elements';
+import { MindMapContext } from '@/hooks/use-mind-map';
 
 export interface MindMapContextType {
   nodes: Node<CustomNodeData>[];
@@ -36,16 +34,6 @@ export interface MindMapContextType {
   setEdges: (updater: Edge[] | ((currentEdges: Edge[]) => Edge[])) => void;
   toggleNodeCollapse: (nodeId: string) => void;
 }
-
-export const MindMapContext = createContext<MindMapContextType | undefined>(undefined);
-
-export const useMindMap = (): MindMapContextType => {
-  const context = useContext(MindMapContext);
-  if (context === undefined) {
-    throw new Error('useMindMap must be used within a MindMapProvider');
-  }
-  return context;
-};
 
 interface MindMapProviderProps {
   children: ReactNode;
