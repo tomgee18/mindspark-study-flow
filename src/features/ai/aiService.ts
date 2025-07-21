@@ -127,7 +127,7 @@ ${sanitizedText}
                 safetySettings,
             });
             responseText = result.response.text();
-        } catch (apiError: any) {
+        } catch (apiError: unknown) {
             console.error("Google AI API error (generateMindMapFromText):", apiError);
             throw new Error(`AI service temporarily unavailable. Please try again in a few moments.`);
         }
@@ -201,7 +201,7 @@ ${sanitizedText}
 
             if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges) && flow.nodes.length > 0) {
                 // Validate node structure
-                const validatedNodes = flow.nodes.map((node: any, index: number) => ({
+                const validatedNodes = flow.nodes.map((node: Node<CustomNodeData>, index: number) => ({
                     ...node,
                     id: node.id || `node-${index}`,
                     type: 'custom',
@@ -221,10 +221,12 @@ ${sanitizedText}
             console.error("Could not extract JSON from AI response:", responseText);
             throw new Error("AI response format error. Please try again with different input.");
         }
-    } catch (e: any) {
-        console.error("Failed to parse AI response:", e.message);
-        if (e.message.includes("AI response format") || e.message.includes("Generated mind map")) {
-            throw e;
+    } catch (e: unknown) {
+        if (e instanceof Error) {
+            console.error("Failed to parse AI response:", e.message);
+            if (e.message.includes("AI response format") || e.message.includes("Generated mind map")) {
+                throw e;
+            }
         }
         throw new Error("Unable to process AI response. Please try again with clearer input text.");
     }
@@ -358,10 +360,13 @@ Example of expected JSON output format:
             console.error("Could not extract JSON array from AI response:", responseText);
             throw new Error("AI response format error. Please try again with different input.");
         }
-    } catch (e: any) {
-        console.error("Failed to parse AI quiz response:", e.message);
-        console.error("Raw AI response text for quiz:", responseText);
-        throw new Error(`Failed to parse quiz from AI response: ${e.message}`);
+    } catch (e: unknown) {
+        if (e instanceof Error) {
+            console.error("Failed to parse AI quiz response:", e.message);
+            console.error("Raw AI response text for quiz:", responseText);
+            throw new Error(`Failed to parse quiz from AI response: ${e.message}`);
+        }
+        throw new Error("An unknown error occurred while parsing the quiz response.");
     }
 }
 
@@ -522,7 +527,7 @@ Example of expected JSON output format:
 
         if (flow && Array.isArray(flow.nodes) && Array.isArray(flow.edges)) {
             // Ensure nodes have CustomNodeData structure in their data field
-            const validatedNodes = flow.nodes.map((node: any) => ({
+            const validatedNodes = flow.nodes.map((node: Node<CustomNodeData>) => ({
                 ...node,
                 type: 'custom', // Enforce custom type
                 data: {
@@ -537,9 +542,12 @@ Example of expected JSON output format:
             console.error("Raw AI response for expansion:", responseText);
             throw new Error('Invalid JSON structure for node expansion from AI (nodes or edges array missing).');
         }
-    } catch (e: any) {
-        console.error("Failed to parse AI expansion response:", e.message);
-        console.error("Raw AI response text for expansion:", result.response.text());
-        throw new Error(`Failed to parse node expansion from AI response: ${e.message}`);
+    } catch (e: unknown) {
+        if (e instanceof Error) {
+            console.error("Failed to parse AI expansion response:", e.message);
+            console.error("Raw AI response text for expansion:", result.response.text());
+            throw new Error(`Failed to parse node expansion from AI response: ${e.message}`);
+        }
+        throw new Error("An unknown error occurred while parsing the expansion response.");
     }
 }
