@@ -1,14 +1,30 @@
-
 import React from 'react';
-import Header from '@/app/layout/Header'; // Adjusted path
-// AppSidebar will be passed as a prop, so no direct import needed here for rendering.
+import Header from './Header';
 import { ReactFlowProvider } from '@xyflow/react';
 
+/**
+ * Props for the MainLayout component
+ */
 interface IMainLayoutProps {
+  /**
+   * The sidebar content to display
+   */
   sidebar: React.ReactNode;
+  
+  /**
+   * The main content to display
+   */
   mainContent: React.ReactNode;
 }
 
+/**
+ * MainLayout component that provides the main layout structure for the application
+ * 
+ * @param props - The component props
+ * @param props.sidebar - The sidebar content to display
+ * @param props.mainContent - The main content to display
+ * @returns The MainLayout component
+ */
 const MainLayout: React.FC<IMainLayoutProps> = ({ sidebar, mainContent }) => {
   return (
     <div className="flex flex-col h-screen bg-background">
